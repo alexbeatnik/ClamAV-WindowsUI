@@ -105,10 +105,25 @@ namespace ClamAVUI
         void UpdateStatsUi()
         {
             int q = QuarantineCount();
-            statsLabel.Text = string.Format("{0}\r\n{1}\r\n{2}\r\n{3}\r\n{4}\r\n{5}\r\n{6}",
-                clamVersion, DbExists() ? DbDateString() : "—",
+            statStrip.Captions = new string[]
+            {
+                Lang.T("stat.clamav"), Lang.T("stat.lastScan"), Lang.T("stat.scans"),
+                Lang.T("stat.files"), Lang.T("stat.threats"), Lang.T("stat.quarantined")
+            };
+            statStrip.Values = new string[]
+            {
+                clamVersion,
                 lastScanInfo.Length == 0 ? Lang.T("stats.neverScanned") : lastScanInfo,
-                totalScans, totalFilesScanned, totalFound, q);
+                totalScans.ToString(), totalFilesScanned.ToString(),
+                totalFound.ToString(), q.ToString()
+            };
+            statStrip.ValueColors = new Color[]
+            {
+                Color.Empty, Color.Empty, Color.Empty, Color.Empty,
+                totalFound > 0 ? Theme.Danger : Color.Empty,
+                q > 0 ? Theme.Warn : Color.Empty
+            };
+            statStrip.Invalidate();
             if (btnQuarantine != null && btnQuarantine.Badge != q)
             {
                 btnQuarantine.Badge = q;

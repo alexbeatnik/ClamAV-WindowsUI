@@ -90,14 +90,15 @@ namespace ClamAVUI
         ListView quarList;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
         RichTextBox log;
-        Label statusLabel, heroTitle, heroSub, statsLabel, sysNames, langLabel, lastActivityLabel;
+        Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel;
         ShieldIndicator shield;
         Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky;
         SlimMarquee progress;
         NotifyIcon tray;
         ToolStripItem trayOpenItem, trayExitItem;
         StatusBanner statusBanner, activityRow;
-        CardPanel cardSystem, cardQuar, cardScan, cardSettingsPanel;
+        StatStrip statStrip;
+        CardPanel cardQuar, cardScan, cardSettingsPanel;
         Panel[] pages;
         NavTab[] navs;
         static Image logoImage;

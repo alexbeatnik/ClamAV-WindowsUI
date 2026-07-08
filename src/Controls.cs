@@ -85,8 +85,9 @@ namespace ClamAVUI
             }
             if (CardStyle)
             {
-                float iconSize = Math.Min(Width * 0.32f, 34f);
-                var iconRect = new RectangleF((Width - iconSize) / 2f, 16, iconSize, iconSize);
+                // icon scales with the tile so big dashboard tiles get big glyphs
+                float iconSize = Math.Min(Width * 0.30f, Height * 0.36f);
+                var iconRect = new RectangleF((Width - iconSize) / 2f, Height * 0.16f, iconSize, iconSize);
                 Icon(g, iconRect, fg);
                 if (Badge > 0)
                 {
@@ -103,7 +104,7 @@ namespace ClamAVUI
                             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
                     }
                 }
-                var textRect = new Rectangle(4, (int)(iconRect.Bottom + 8), Width - 8, Height - (int)(iconRect.Bottom + 8) - 6);
+                var textRect = new Rectangle(4, (int)(iconRect.Bottom + 10), Width - 8, Height - (int)(iconRect.Bottom + 10) - 6);
                 TextRenderer.DrawText(g, Text, Font, textRect, fg,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
             }
@@ -381,6 +382,50 @@ namespace ClamAVUI
             using (var b = new SolidBrush(AccentColor))
             using (var path = Theme.Round(new RectangleF(1, Height * 0.22f, 5, Height * 0.56f), 2.5f))
                 g.FillPath(b, path);
+        }
+    }
+
+    // Compact one-row statistics strip: small muted captions with the value below
+    // each, laid out left to right — replaces the old tall SYSTEM card that ate
+    // half the dashboard for a handful of numbers.
+    class StatStrip : Panel
+    {
+        public string[] Captions = new string[0];
+        public string[] Values = new string[0];
+        public Color[] ValueColors; // optional per-value override (Color.Empty = default text)
+
+        public StatStrip()
+        {
+            BackColor = Theme.Bg;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
+                | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            Theme.PaintCard(g, Width, Height);
+            using (var capF = new Font("Segoe UI Semibold", 8f))
+            using (var valF = new Font("Segoe UI Semibold", 11f))
+            {
+                float x = 20;
+                for (int i = 0; i < Captions.Length; i++)
+                {
+                    string cap = Captions[i].ToUpperInvariant();
+                    string val = i < Values.Length ? Values[i] : "";
+                    int cell = Math.Max(TextRenderer.MeasureText(g, cap, capF).Width,
+                                        TextRenderer.MeasureText(g, val, valF).Width);
+                    TextRenderer.DrawText(g, cap, capF, new Rectangle((int)x, 12, cell + 4, 15),
+                        Theme.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+                    Color vc = ValueColors != null && i < ValueColors.Length && !ValueColors[i].IsEmpty
+                        ? ValueColors[i] : Theme.Text;
+                    TextRenderer.DrawText(g, val, valF, new Rectangle((int)x, 29, cell + 4, 24),
+                        vc, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+                    x += cell + 28;
+                }
+            }
         }
     }
 

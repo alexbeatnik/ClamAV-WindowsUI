@@ -22,8 +22,8 @@ namespace ClamAVUI
         {
             Text = AppName;
             Icon = AppIcon;
-            MinimumSize = new Size(880, 620); // the taller hero + tiles need the room
-            Size = new Size(940, 680);
+            MinimumSize = new Size(900, 600);
+            Size = new Size(940, 640);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
@@ -187,100 +187,105 @@ namespace ClamAVUI
             page.Dock = DockStyle.Fill;
             page.BackColor = Theme.Bg;
 
-            // Hero status banner — the commercial-AV centerpiece: a large glowing
-            // shield, big headline, and the primary QUICK SCAN action right inside
-            // it (the "one big obvious button" every commercial dashboard leads with).
+            // Top mosaic (Zillya-style, in our dark card idiom): a large QUICK SCAN
+            // tile on the left, and the protection-status tile with the glowing
+            // shield on the right. While a scan/update runs, a red STOP tile swaps
+            // in where QUICK SCAN was (see SetBusy).
+            var topGrid = new TableLayoutPanel();
+            topGrid.Dock = DockStyle.Top;
+            topGrid.Height = 204;
+            topGrid.BackColor = Theme.Bg;
+            topGrid.ColumnCount = 2;
+            topGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58f));
+            topGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42f));
+            topGrid.RowCount = 1;
+            topGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            dashQuick = MakeCardButton(Lang.T("btn.quickScan"), Theme.Accent, Theme.AccentHot, Theme.Text, Ico.Radar);
+            dashQuick.Dock = DockStyle.Fill;
+            dashQuick.Font = new Font("Segoe UI Semibold", 11f);
+            dashQuick.Click += delegate { RunQuickScan(); };
+            dashStop = MakeCardButton(Lang.T("btn.stop"), Theme.Danger, Theme.DangerHot, Theme.Text, Ico.StopIcon);
+            dashStop.Dock = DockStyle.Fill;
+            dashStop.Font = dashQuick.Font;
+            dashStop.Visible = false;
+            dashStop.Click += delegate { StopCurrent(); };
+            var quickCell = new Panel();
+            quickCell.Dock = DockStyle.Fill;
+            quickCell.Margin = new Padding(0, 4, 7, 8);
+            quickCell.BackColor = Theme.Bg;
+            quickCell.Controls.Add(dashQuick);
+            quickCell.Controls.Add(dashStop);
+            scanButtons.Add(dashQuick);
+
             statusBanner = new StatusBanner();
-            statusBanner.Dock = DockStyle.Top;
-            statusBanner.Height = 104;
-            statusBanner.Width = 880; // pre-size so the Anchor.Right button keeps its margin
-            statusBanner.Margin = new Padding(6, 4, 6, 4);
+            statusBanner.Dock = DockStyle.Fill;
+            statusBanner.Margin = new Padding(7, 4, 0, 8);
             shield = new ShieldIndicator();
-            shield.Size = new Size(66, 66);
-            shield.Location = new Point(22, 17);
+            shield.Size = new Size(72, 72);
             shield.BackColor = Theme.Card;
             heroTitle = new Label();
-            heroTitle.AutoSize = true;
-            heroTitle.Location = new Point(102, 22);
-            heroTitle.Font = new Font("Segoe UI Semibold", 15f);
+            heroTitle.Font = new Font("Segoe UI Semibold", 14f);
             heroTitle.ForeColor = Theme.Text;
             heroTitle.BackColor = Theme.Card;
+            heroTitle.TextAlign = ContentAlignment.MiddleCenter;
             heroSub = new Label();
-            heroSub.AutoSize = true;
-            heroSub.Location = new Point(104, 56);
             heroSub.Font = Font;
             heroSub.ForeColor = Theme.Muted;
             heroSub.BackColor = Theme.Card;
-            dashQuick = MakeButton(Lang.T("btn.quickScan"), 180, Theme.Accent, Theme.AccentHot, Ico.Radar);
-            dashQuick.Height = 44;
-            dashQuick.Font = new Font("Segoe UI Semibold", 10f);
-            dashQuick.BackColor = Theme.Card;
-            dashQuick.Location = new Point(statusBanner.Width - dashQuick.Width - 28,
-                (statusBanner.Height - dashQuick.Height) / 2);
-            dashQuick.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            dashQuick.Click += delegate { RunQuickScan(); };
-            // red STOP takes QUICK SCAN's place while a scan/update runs (see SetBusy)
-            dashStop = MakeButton(Lang.T("btn.stop"), 180, Theme.Danger, Theme.DangerHot, Ico.StopIcon);
-            dashStop.Height = 44;
-            dashStop.Font = dashQuick.Font;
-            dashStop.BackColor = Theme.Card;
-            dashStop.Location = dashQuick.Location;
-            dashStop.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            dashStop.Visible = false;
-            dashStop.Click += delegate { StopCurrent(); };
+            heroSub.TextAlign = ContentAlignment.MiddleCenter;
+            heroSub.AutoEllipsis = true;
             statusBanner.Controls.Add(shield);
             statusBanner.Controls.Add(heroTitle);
             statusBanner.Controls.Add(heroSub);
-            statusBanner.Controls.Add(dashQuick);
-            statusBanner.Controls.Add(dashStop);
-            scanButtons.Add(dashQuick);
+            statusBanner.Resize += delegate { LayoutHeroTile(); };
+            LayoutHeroTile();
 
-            // Secondary scan tiles below the hero, icon + label like a launcher
-            var scanBar = new FlowLayoutPanel();
+            topGrid.Controls.Add(quickCell, 0, 0);
+            topGrid.Controls.Add(statusBanner, 1, 0);
+
+            // Secondary action tiles: four equal columns stretching the full row width
+            var scanBar = new TableLayoutPanel();
             scanBar.Dock = DockStyle.Top;
-            scanBar.Height = 112;
-            scanBar.Padding = new Padding(6, 4, 6, 2);
+            scanBar.Height = 128;
             scanBar.BackColor = Theme.Bg;
+            scanBar.ColumnCount = 4;
+            for (int i = 0; i < 4; i++)
+                scanBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+            scanBar.RowCount = 1;
+            scanBar.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             dashScanFile = MakeCardButton(Lang.T("btn.scanFileDash"), Theme.Card, Theme.CardLine, Theme.Text, Ico.FileIcon);
             dashScanFile.Click += delegate { PickAndScan(false); };
             dashScanFolder = MakeCardButton(Lang.T("btn.scanFolderDash"), Theme.Card, Theme.CardLine, Theme.Text, Ico.FolderIcon);
             dashScanFolder.Click += delegate { PickAndScan(true); };
             dashScanAll = MakeCardButton(Lang.T("btn.scanAll"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Stack);
             dashScanAll.Click += delegate { RunFullScan(); };
-            scanBar.Controls.AddRange(new Control[] { dashScanFile, dashScanFolder, dashScanAll });
+            btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
+            btnQuarantine.Click += delegate { ShowPage(2); };
+            var rowTiles = new ModernButton[] { dashScanFile, dashScanFolder, dashScanAll, btnQuarantine };
+            for (int i = 0; i < rowTiles.Length; i++)
+            {
+                rowTiles[i].Dock = DockStyle.Fill;
+                rowTiles[i].Margin = new Padding(i == 0 ? 0 : 6, 0, i == rowTiles.Length - 1 ? 0 : 6, 8);
+                scanBar.Controls.Add(rowTiles[i], i, 0);
+            }
             scanButtons.Add(dashScanFile);
             scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll);
 
-            btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
-            btnQuarantine.Click += delegate { ShowPage(2); };
-            scanBar.Controls.Add(btnQuarantine);
-
-            // System card: stats plus the (conditionally visible) update button —
-            // folded together instead of a separate "Updates" card
-            cardSystem = new CardPanel(Lang.T("card.system"));
-            cardSystem.Dock = DockStyle.Top;
-            cardSystem.Height = 213;
-            cardSystem.Margin = new Padding(6, 4, 6, 4);
-            sysNames = new Label();
-            sysNames.Dock = DockStyle.Fill;
-            sysNames.Font = new Font("Consolas", 9.5f);
-            sysNames.ForeColor = Theme.Text;
-            sysNames.BackColor = Theme.Card;
-            sysNames.Text = Lang.T("sys.labels");
-            statsLabel = new Label();
-            statsLabel.Dock = DockStyle.Right;
-            statsLabel.Width = 150;
-            statsLabel.Font = new Font("Consolas", 9.5f);
-            statsLabel.ForeColor = Theme.Warn;
-            statsLabel.BackColor = Theme.Card;
-            statsLabel.TextAlign = ContentAlignment.TopRight;
+            // Compact stat strip + the (conditionally visible) update button — one
+            // slim row instead of the old tall SYSTEM card, which ate half the
+            // dashboard for a handful of numbers (the DB date lives in the hero)
+            statStrip = new StatStrip();
+            statStrip.Dock = DockStyle.Top;
+            statStrip.Height = 66;
+            statStrip.Margin = new Padding(6, 4, 6, 4);
+            statStrip.Padding = new Padding(0, 10, 12, 14);
             btnUpdate = MakeLightButton(Lang.T("btn.updateDb"), Ico.Refresh);
             btnUpdate.BackColor = Theme.Card;
-            btnUpdate.Dock = DockStyle.Bottom;
+            btnUpdate.Width = 190;
+            btnUpdate.Dock = DockStyle.Right;
             btnUpdate.Click += delegate { RunFreshclam(); };
-            cardSystem.Controls.Add(sysNames);
-            cardSystem.Controls.Add(statsLabel);
-            cardSystem.Controls.Add(btnUpdate);
+            statStrip.Controls.Add(btnUpdate);
 
             // Last-activity strip: one line instead of a scrollable log card — the
             // full history is one click away via "Open Log File", so the dashboard
@@ -306,13 +311,22 @@ namespace ClamAVUI
             activityRow.Controls.Add(lastActivityLabel);
             activityRow.Controls.Add(btnScanLog);
 
-            // Dock=Top stacks in reverse add order: hero banner first, then the
-            // scan tiles, the system card, and the last-activity strip
+            // Dock=Top stacks in reverse add order: the big tile mosaic first,
+            // then the action tiles, the stat strip, and the last-activity strip
             page.Controls.Add(activityRow);
-            page.Controls.Add(cardSystem);
+            page.Controls.Add(statStrip);
             page.Controls.Add(scanBar);
-            page.Controls.Add(statusBanner);
+            page.Controls.Add(topGrid);
             return page;
+        }
+
+        // Centers the shield and both text lines inside the protection-status tile
+        void LayoutHeroTile()
+        {
+            int w = statusBanner.Width, h = statusBanner.Height;
+            shield.SetBounds((w - shield.Width) / 2, (int)(h * 0.10f), shield.Width, shield.Height);
+            heroTitle.SetBounds(8, (int)(h * 0.53f), w - 16, 30);
+            heroSub.SetBounds(12, (int)(h * 0.72f), w - 24, 20);
         }
 
         Panel BuildLogsPage()
@@ -715,7 +729,6 @@ namespace ClamAVUI
             navs[2].Text = Lang.T("nav.quarantine");
             navs[3].Text = Lang.T("nav.settings");
 
-            cardSystem.HeaderText = Lang.T("card.system"); cardSystem.Invalidate();
             if (cardQuar != null) { cardQuar.HeaderText = Lang.T("card.quarantine"); cardQuar.Invalidate(); }
             if (cardScan != null) { cardScan.HeaderText = Lang.T("card.scanning"); cardScan.Invalidate(); }
             cardSettingsPanel.HeaderText = Lang.T("card.settings"); cardSettingsPanel.Invalidate();
@@ -741,7 +754,6 @@ namespace ClamAVUI
             btnStop.Text = Lang.T("btn.stop");
             dashStop.Text = Lang.T("btn.stop");
             btnWatchDirs.Text = Lang.T("btn.folders");
-            sysNames.Text = Lang.T("sys.labels");
 
             chkRiskyOnly.Text = Lang.T("settings.riskyOnly");
             chkQuarantine.Text = Lang.T("settings.autoQuarantine");

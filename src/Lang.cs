@@ -335,7 +335,13 @@ namespace ClamAVUI
             A("hero.pressUpdateFirstTime", "Press \"Update Database\" — first download is ~250 MB", "Натисни «Оновити бази» — перший раз завантажиться ~250 МБ");
             A("tray.appUpdateInstalling", "Updating ClamAV UI to {0} — the app will restart in a few seconds…", "Оновлюю ClamAV UI до {0} — програма перезапуститься за кілька секунд…");
             A("stats.neverScanned", "never", "ще не було");
-            A("sys.labels", "ClamAV:\r\nDB date:\r\nLast scan:\r\nScans:\r\nFiles scanned:\r\nThreats:\r\nQuarantined:", "ClamAV:\r\nБази від:\r\nОстанній скан:\r\nПеревірок:\r\nФайлів проскановано:\r\nЗагроз:\r\nУ карантині:");
+            // Dashboard stat strip captions
+            A("stat.clamav", "ClamAV", "ClamAV");
+            A("stat.lastScan", "Last scan", "Останній скан");
+            A("stat.scans", "Scans", "Перевірок");
+            A("stat.files", "Files scanned", "Файлів перевірено");
+            A("stat.threats", "Threats", "Загроз");
+            A("stat.quarantined", "Quarantined", "У карантині");
         }
     }
 }
