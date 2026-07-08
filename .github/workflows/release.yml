@@ -1,14 +1,14 @@
 name: Release
 
 # Builds ClamAVUI.exe and publishes it as a GitHub Release whenever the version
-# in ClamUI.cs's AssemblyVersion changes on main. Safe to run on every push:
-# it no-ops if a release for the current version already exists. Can also be
-# triggered manually to (re)build and publish the current version on demand.
+# in src/AssemblyInfo.cs's AssemblyVersion changes on main. Safe to run on every
+# push: it no-ops if a release for the current version already exists. Can also
+# be triggered manually to (re)build and publish the current version on demand.
 on:
   push:
     branches: [main]
     paths:
-      - "ClamUI.cs"
+      - "src/**"
   workflow_dispatch:
 
 permissions:
@@ -21,13 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Read version from ClamUI.cs
+      - name: Read version from src/AssemblyInfo.cs
         id: version
         shell: pwsh
         run: |
-          $content = Get-Content ClamUI.cs -Raw
+          $content = Get-Content src/AssemblyInfo.cs -Raw
           if ($content -notmatch 'AssemblyVersion\("([\d.]+)\.\d+"\)') {
-            Write-Error "Could not find AssemblyVersion in ClamUI.cs"
+            Write-Error "Could not find AssemblyVersion in src/AssemblyInfo.cs"
             exit 1
           }
           $ver = $matches[1]

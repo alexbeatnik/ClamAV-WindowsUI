@@ -1,0 +1,341 @@
+// Two-language string table (English default, Ukrainian alternative).
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using Microsoft.Win32;
+
+namespace ClamAVUI
+{
+    // Two-language string table (English default, Ukrainian alternative).
+    // Lang.Current selects the active language; Lang.T(key) resolves a string,
+    // falling back to English and then to the key itself if nothing matches.
+    static class Lang
+    {
+        public enum Language { English, Ukrainian }
+        public static Language Current = Language.English;
+
+        static readonly Dictionary<string, string> En = new Dictionary<string, string>();
+        static readonly Dictionary<string, string> Uk = new Dictionary<string, string>();
+
+        public static string T(string key)
+        {
+            var dict = Current == Language.Ukrainian ? Uk : En;
+            string v;
+            if (dict.TryGetValue(key, out v)) return v;
+            if (En.TryGetValue(key, out v)) return v;
+            return key;
+        }
+
+        static void A(string key, string en, string uk) { En[key] = en; Uk[key] = uk; }
+
+        static Lang()
+        {
+            // Install / uninstall
+            A("install.title", "ClamAV UI — Setup", "ClamAV UI — встановлення");
+            A("install.installing", "Installing ClamAV UI to Program Files…", "Встановлюю ClamAV UI у Program Files…");
+            A("install.failed", "Installation failed:\r\n", "Не вдалося встановити:\r\n");
+            A("uninstall.confirm", "Remove ClamAV UI along with ClamAV, the signature database and quarantine?", "Видалити ClamAV UI разом із ClamAV, базами сигнатур і карантином?");
+            A("uninstall.done", "ClamAV UI has been removed.", "ClamAV UI видалено.");
+            A("uninstall.error", "Removal error: ", "Помилка видалення: ");
+
+            // Main window chrome
+            A("status.ready", "Ready.", "Готово.");
+            A("tray.open", "Open", "Відкрити");
+            A("tray.exit", "Exit", "Вихід");
+
+            // Top nav tabs
+            A("nav.dashboard", "Dashboard", "Огляд");
+            A("nav.logs", "Logs", "Логи");
+            A("nav.quarantine", "Quarantine", "Карантин");
+            A("nav.settings", "Settings", "Налаштування");
+
+            // Cards
+            A("card.system", "System", "Система");
+            A("card.quarantine", "Quarantine", "Карантин");
+            A("card.scanning", "Scanning", "Сканування");
+            A("card.settings", "Settings", "Налаштування");
+
+            // Buttons
+            A("btn.quickScan", "QUICK SCAN", "ШВИДКИЙ СКАН");
+            A("btn.scanFileDash", "SCAN FILE", "СКАНУВАТИ ФАЙЛ");
+            A("btn.scanFolderDash", "SCAN FOLDER", "СКАНУВАТИ ПАПКУ");
+            A("btn.scanAll", "FULL PC", "ВЕСЬ ПК");
+            A("btn.updateDb", "UPDATE DATABASE", "ОНОВИТИ БАЗИ");
+            A("btn.openLog", "OPEN LOG FILE", "ВІДКРИТИ ФАЙЛ ЖУРНАЛУ");
+            A("btn.openQuarantine", "OPEN QUARANTINE", "ВІДКРИТИ КАРАНТИН");
+            A("btn.exclusions", "EXCLUSIONS", "ВИКЛЮЧЕННЯ");
+            A("btn.quick", "QUICK", "ШВИДКИЙ");
+            A("btn.file", "FILE", "ФАЙЛ");
+            A("btn.folder", "FOLDER", "ПАПКА");
+            A("btn.stop", "STOP", "ЗУПИНИТИ");
+            A("btn.folders", "FOLDERS…", "ПАПКИ…");
+            A("btn.installedPF", "INSTALLED TO PROGRAM FILES", "ВСТАНОВЛЕНО В PROGRAM FILES");
+            A("btn.installPF", "INSTALL TO PROGRAM FILES", "ВСТАНОВИТИ В PROGRAM FILES");
+            A("btn.fixWinTemp", "FIX C:\\WINDOWS\\TEMP ACCESS", "ВІДНОВИТИ ДОСТУП ДО C:\\WINDOWS\\TEMP");
+            A("btn.close", "Close", "Закрити");
+            A("btn.toExclusions", "To exclusions", "У виключення");
+            A("btn.delete", "Delete", "Видалити");
+            A("btn.toQuarantine", "To quarantine", "В карантин");
+            A("btn.deleteForever", "Delete permanently", "Видалити назавжди");
+            A("btn.restore", "Restore", "Відновити");
+            A("btn.openFolder", "Open folder", "Відкрити папку");
+            A("btn.deleteFile", "Delete file", "Видалити файл");
+            A("btn.removeFromList", "Remove from list", "Прибрати зі списку");
+            A("btn.addFile", "Add file…", "Додати файл…");
+            A("btn.addFolder", "Add folder…", "Додати папку…");
+            A("btn.cancel", "Cancel", "Скасувати");
+
+            // Settings page
+            A("settings.monitorLabel", "Auto-check new files in folders ({0})", "Автоперевірка нових файлів у папках ({0})");
+            A("settings.riskyOnly", "Check risky file types only (exe, scripts, archives, documents)", "Перевіряти лише небезпечні типи (exe, скрипти, архіви, документи)");
+            A("settings.autoQuarantine", "Auto-quarantine (don't ask what to do with detections)", "Автоматично в карантин (не питати, що робити зі знайденим)");
+            A("settings.autoUpdate", "Update database automatically (once a day)", "Оновлювати бази автоматично (раз на добу)");
+            A("settings.fullRisky", "Full scan: risky file types only (much faster)", "У повному скані перевіряти лише небезпечні типи (набагато швидше)");
+            A("settings.autostart", "Start with Windows (in tray)", "Запускати разом з Windows (у треї)");
+            A("settings.language", "Interface language:", "Мова інтерфейсу:");
+            A("msg.installConfirm", "The app will be copied to {0} together with ClamAV and the database,\r\nStart Menu/Desktop shortcuts will be created, and it will be registered in \"Apps\".\r\nAdministrator rights are required. Continue?",
+                "Програма скопіюється в {0} разом із ClamAV і базами,\r\nз'являться ярлики в Пуску, на робочому столі та запис у «Програмах».\r\nПотрібні права адміністратора. Продовжити?");
+            A("msg.fixWinTempConfirm", "On this PC, C:\\Windows\\Temp is locked down so even reading its contents is denied "
+                + "to regular apps — a common malware drop point can't be monitored as a result.\r\n\r\n"
+                + "This will restore the default Windows read permission on that one folder only "
+                + "(via a one-time administrator prompt). The app itself keeps running without admin rights "
+                + "afterwards. Continue?",
+                "На цьому ПК доступ до C:\\Windows\\Temp обмежено настільки, що звичайні програми не можуть "
+                + "навіть прочитати її вміст — тож типове місце для дропу малваре лишається поза наглядом.\r\n\r\n"
+                + "Зараз буде відновлено стандартний Windows-дозвіл на читання лише для цієї папки "
+                + "(через одноразовий запит адміністратора). Сама програма й надалі працюватиме без прав адміністратора. Продовжити?");
+            A("status.fixWinTempCancelled", "C:\\Windows\\Temp access fix cancelled.", "Відновлення доступу до C:\\Windows\\Temp скасовано.");
+            A("status.fixWinTempFailed", "Could not restore access to C:\\Windows\\Temp (blocked by policy?).", "Не вдалося відновити доступ до C:\\Windows\\Temp (можливо, заблоковано політикою).");
+            A("status.fixWinTempDone", "Access restored — C:\\Windows\\Temp is now monitored.", "Доступ відновлено — C:\\Windows\\Temp тепер під наглядом.");
+
+            // Threat dialog
+            A("threat.title", "Threats found — what to do?", "Знайдено загрози — що робити?");
+            A("col.file", "File", "Файл");
+            A("col.threat", "Threat", "Загроза");
+            A("threat.hint", "The action applies to the selected files (none selected = all).", "Дія застосовується до виділених файлів (нічого не виділено = до всіх).");
+            A("msg.deleteConfirm", "Permanently delete {0} file(s)?", "Видалити назавжди {0} файл(ів)?");
+            A("title.deletion", "Deletion", "Видалення");
+            A("title.error", "Error", "Помилка");
+            A("status.exclusionsCount", "Exclusions: {0}.", "Виключень: {0}.");
+
+            // Quarantine dialog
+            A("quarantine.title", "Quarantine", "Карантин");
+            A("col.origin", "Origin", "Звідки");
+            A("col.when", "When", "Коли");
+            A("quarantine.unknownOrigin", "(unknown)", "(невідомо)");
+            A("msg.restoreConfirm", "WARNING: this file was flagged as infected. Really restore it?", "УВАГА: файл було позначено як заражений. Точно відновити?");
+            A("msg.unknownOriginPath", "Unknown original path for {0}.\r\nOpen the quarantine folder and retrieve the file manually.", "Невідомий вихідний шлях для {0}.\r\nВідкрий папку карантину і забери файл вручну.");
+            A("msg.fileExists", "File already exists: {0}", "Файл уже існує: {0}");
+            A("msg.quarantineMoveFailed", "Failed to move to quarantine:\r\n{0}", "Не вдалося перемістити в карантин:\r\n{0}");
+
+            // Exclusions dialog
+            A("excl.title", "Scan exclusions", "Виключення зі сканування");
+            A("col.path", "Path", "Шлях");
+            A("col.type", "Type", "Тип");
+            A("type.file", "file", "файл");
+            A("type.folder", "folder", "папка");
+            A("type.missing", "missing", "відсутній");
+            A("msg.onlyExistingToQuarantine", "Only an existing file can be quarantined: {0}", "В карантин можна перемістити лише наявний файл: {0}");
+            A("msg.deleteFromDiskConfirm", "Permanently delete {0} file(s) from disk and remove from the list?", "Видалити з диска {0} файл(ів) і прибрати зі списку?");
+
+            // Watch dirs / path list editor
+            A("watch.editTitle", "Folders to monitor (one per line)", "Папки для моніторингу (одна на рядок)");
+            A("log.folderNotFound", "Folder not found, skipping: {0}\r\n", "Папку не знайдено, пропускаю: {0}\r\n");
+            A("log.pathNotFound", "Path not found, skipping: {0}\r\n", "Шлях не знайдено, пропускаю: {0}\r\n");
+
+            // Monitoring
+            A("status.monitorOn", "Monitoring enabled: new files will be checked automatically.", "Моніторинг увімкнено: нові файли перевірятимуться автоматично.");
+            A("status.monitorOff", "Monitoring disabled.", "Моніторинг вимкнено.");
+            A("log.watchFailed", "Failed to watch {0}: {1}\r\n", "Не вдалося стежити за {0}: {1}\r\n");
+            A("log.watchingFolders", "Monitoring: {0} folder(s).\r\n", "Моніторинг: {0} папок.\r\n");
+
+            // Scanning: pickers and generic
+            A("dlg.pickFolder", "Choose a folder to scan", "Вибери папку для сканування");
+            A("dlg.pickFile", "Choose a file to scan", "Вибери файл для сканування");
+            A("log.scanning", "Scanning: {0}\r\n", "Сканую: {0}\r\n");
+            A("log.buildingList", "Building file list…\r\n", "Складаю список файлів…\r\n");
+            A("status.scanning", "Scanning…", "Сканування…");
+            A("log.listCreateFailedInline", "Could not create the file list ({0}), passing files on the command line.\r\n", "Не вдалося створити список файлів ({0}), передаю в рядку.\r\n");
+            A("log.newFilesHeader", "\r\n[{0:HH:mm:ss}] New files ({1}) — auto-check:\r\n", "\r\n[{0:HH:mm:ss}] Нові файли ({1}) — автоперевірка:\r\n");
+            A("status.autoCheck", "Auto-checking new files: {0}…", "Автоперевірка нових файлів: {0}…");
+            A("log.filesToCheck", "Files to check: {0}", "Файлів для перевірки: {0}");
+            A("desc.autoCheck", "auto-check of new files", "автоперевірка нових файлів");
+
+            // Progress / ETA
+            A("status.progress", "Scanned {0} of {1} ({2:0}%){3}, threats: {4}", "Скановано {0} із {1} ({2:0}%){3}, загроз: {4}");
+            A("eta.remainingPrefix", ", remaining ", ", залишилось ");
+            A("eta.estimating", ", estimating time…", ", оцінюю час…");
+            A("time.hm", "{0:0}h {1:0}m", "{0:0} год {1:0} хв");
+            A("time.ms", "{0:0}m {1:0}s", "{0:0} хв {1:0} с");
+            A("time.s", "{0:0}s", "{0:0} с");
+
+            // Heartbeat
+            A("log.hbListing", "[{0:HH:mm:ss}] Building file list… found {1}, elapsed {2}\r\n", "[{0:HH:mm:ss}] Складаю список файлів… знайдено {1}, минуло {2}\r\n");
+            A("log.hbEngineLoading", "[{0:HH:mm:ss}] Engine is loading the database into memory… elapsed {1}\r\n", "[{0:HH:mm:ss}] Рушій вантажить бази в пам'ять… минуло {1}\r\n");
+            A("log.hbRunning", "[{0:HH:mm:ss}] Running… scanned {1}, elapsed {2}\r\n", "[{0:HH:mm:ss}] Триває… проскановано {1}, минуло {2}\r\n");
+            A("log.hbBigFile", "[{0:HH:mm:ss}] Scanning a large file… scanned {1} of {2} ({3:0}%), elapsed {4}\r\n", "[{0:HH:mm:ss}] Сканую великий файл… проскановано {1} із {2} ({3:0}%), минуло {4}\r\n");
+            A("log.hbProgress", "[{0:HH:mm:ss}] Scanned {1} of {2} ({3:0}%), {4} files remaining{5}{6}\r\n", "[{0:HH:mm:ss}] Проскановано {1} із {2} ({3:0}%), залишилось {4} файлів{5}{6}\r\n");
+            A("log.threatsSuffix", ", threats: {0}", ", загроз: {0}");
+
+            // Log file / history
+            A("history.empty", "No scans yet.", "Ще не було жодного сканування.");
+            A("log.emptyLogFile", "The log is empty — no scans yet.", "Журнал поки порожній — ще не було жодного сканування.");
+
+            // Auto-update
+            A("status.dbUpToDate", "Signature database is up to date.", "Бази сигнатур актуальні.");
+            A("tray.dbUpdateDownloading", "A database update is available — downloading…", "Вийшло оновлення баз сигнатур — завантажую…");
+            A("log.dbNewerAutoDownload", "\r\n[{0:HH:mm}] A newer database is available — downloading automatically…\r\n", "\r\n[{0:HH:mm}] Доступні новіші бази — завантажую автоматично…\r\n");
+            A("hero.dbUpdateAvailable", "A signature database update is available", "Доступне оновлення баз сигнатур");
+            A("status.dbUpdateAvailablePress", "A database update is available — press \"Update Database\".", "Доступне оновлення баз — натисни «Оновити бази».");
+            A("tray.dbUpdateAvailablePress", "A signature database update is available — press \"Update Database\".", "Доступне оновлення баз сигнатур — натисни «Оновити бази».");
+
+            // Full scan
+            A("msg.fullScanRiskyWarn", "Full scan ({0}): risky file types only — exe, scripts,\r\narchives, documents. This is much faster than checking everything\r\n(all files can be enabled in Settings). Continue?",
+                "Повне сканування ({0}): небезпечні типи файлів — exe, скрипти,\r\nархіви, документи. Це набагато швидше, ніж перевіряти все підряд\r\n(усі файли можна ввімкнути в налаштуваннях). Продовжити?");
+            A("msg.fullScanAllWarn", "Full scan ({0}) of ALL files can take many hours.\r\nContinue?", "Повне сканування ({0}) УСІХ файлів може тривати багато годин.\r\nПродовжити?");
+            A("title.fullScan", "Full PC Scan", "Сканування всього ПК");
+            A("desc.fullScan", "full scan ({0})", "повне сканування ({0})");
+            A("log.fullScanRisky", "Full scan (risky types): {0}\r\n", "Повне сканування (небезпечні типи): {0}\r\n");
+            A("log.fullScanAll", "Full scan (all files): {0}\r\n", "Повне сканування (усі файли): {0}\r\n");
+            A("status.fullScanRunning", "Full PC scan…", "Повне сканування ПК…");
+
+            // Quick scan
+            A("desc.quickScan", "quick scan", "швидке сканування");
+            A("log.quickScanHeader", "Quick scan: risky file types in common infection points.\r\n", "Швидке сканування: небезпечні типи файлів у типових місцях зараження.\r\n");
+            A("log.quickScanProcesses", "  + executables of running processes\r\n\r\n", "  + виконувані файли запущених процесів\r\n\r\n");
+            A("status.quickScanRunning", "Quick scan…", "Швидке сканування…");
+
+            // File listing
+            A("status.buildingListFound", "Building file list… found {0}", "Складаю список файлів… знайдено {0}");
+            A("status.scanCancelled", "Scan cancelled.", "Сканування скасовано.");
+            A("log.cancelled", "Cancelled.\r\n", "Скасовано.\r\n");
+            A("status.noFiles", "No files to check.", "Немає файлів для перевірки.");
+            A("log.noFiles", "No files to check.\r\n", "Немає файлів для перевірки.\r\n");
+            A("status.listCreateFailed", "Could not create the file list.", "Не вдалося створити список файлів.");
+            A("log.listCreateFailed", "Could not create the file list: {0}\r\n", "Не вдалося створити список файлів: {0}\r\n");
+
+            // clamd engine
+            A("status.engineStarting", "Starting scan engine (loading database into memory)…", "Запускаю рушій сканування (бази вантажаться в пам'ять)…");
+            A("log.engineStarting", "Starting the clamd engine (loading database into memory, ~30 seconds)…\r\n", "Запускаю рушій clamd (бази вантажаться в пам'ять, ~пів хвилини)…\r\n");
+            A("log.daemonFallback", "clamd failed to start ({0}) — falling back to clamscan.\r\n", "clamd не запустився ({0}) — сканую через clamscan.\r\n");
+            A("log.scanningThreads", "Scanning using {0} parallel process(es).\r\n", "Сканую у {0} потоки.\r\n");
+            A("log.clamdscanStartFailed", "Failed to start clamdscan: {0}\r\n", "Не вдалося запустити clamdscan: {0}\r\n");
+            A("err.daemonExited", "clamd exited unexpectedly", "clamd несподівано завершився");
+            A("err.daemonTimeout", "clamd did not respond within 3 minutes", "clamd не відповів за 3 хвилини");
+
+            // Scan output / results
+            A("status.scannedFound", "Scanned: {0}, threats found: {1}", "Скановано: {0}, знайдено загроз: {1}");
+            A("log.summary", "\r\nSummary: scanned {0} files in {1}, threats found: {2}\r\n", "\r\nПідсумок: проскановано {0} файлів за {1}, знайдено загроз: {2}\r\n");
+            A("status.doneClean", "Done. Scanned: {0}. No threats found.", "Готово. Скановано: {0}. Загроз не знайдено.");
+            A("log.newFilesClean", "New files are clean ✔\r\n", "Нові файли чисті ✔\r\n");
+            A("tray.newFilesClean", "Checked new files: {0} — clean.", "Перевірено нових файлів: {0} — чисто.");
+            A("log.noThreatsFound", "\r\nNo threats found ✔\r\n", "\r\nЗагроз не знайдено ✔\r\n");
+            A("tray.scanDoneClean", "Scan complete: no threats found.", "Сканування завершено: загроз не знайдено.");
+            A("status.threatsFound", "Scanned: {0}. THREATS FOUND: {1}{2}", "Скановано: {0}. ЗНАЙДЕНО ЗАГРОЗ: {1}{2}");
+            A("status.quarantinedSuffix", ", quarantined: {0}", ", у карантині: {0}");
+            A("hero.threatsFoundTitle", "Threats found!", "Знайдено загрози!");
+            A("hero.threatsFoundSub", "Infected files: {0}{1} — check the log", "Заражених файлів: {0}{1} — перевір лог");
+            A("log.threatsFound", "\r\nTHREATS FOUND: {0}{1}\r\n", "\r\nЗНАЙДЕНО ЗАГРОЗ: {0}{1}\r\n");
+            A("tray.threatsFoundWarn", "WARNING: threats found: {0}{1}", "УВАГА: знайдено загроз: {0}{1}");
+            A("status.scanInterrupted", "Scan interrupted or an error occurred (code {0}).", "Сканування перервано або сталася помилка (код {0}).");
+
+            // Install / download ClamAV
+            A("status.installCancelled", "Installation cancelled.", "Встановлення скасовано.");
+            A("msg.offerInstallChoice", "ClamAV was not found next to the program. How do you want to set it up?\r\n\r\n"
+                + "YES — install to Program Files: the app copies itself there, downloads ClamAV\r\n"
+                + "(~220 MB) and the database, and adds Start Menu/Desktop shortcuts and an \"Apps\" entry.\r\n"
+                + "Administrator rights are required.\r\n\r\n"
+                + "NO — portable mode: download ClamAV into the current folder.",
+                "ClamAV не знайдено поруч з програмою. Як налаштувати?\r\n\r\n"
+                + "ТАК — встановити в Program Files: програма скопіюється туди, скачає ClamAV\r\n"
+                + "(~220 МБ) і бази, додасть ярлики в Пуск, на робочий стіл та в «Програми».\r\n"
+                + "Потрібні права адміністратора.\r\n\r\n"
+                + "НІ — портативний режим: скачати ClamAV у поточну папку.");
+            A("msg.offerPortableDownload", "ClamAV was not found next to the program.\r\n\r\n"
+                + "Download it automatically from GitHub (~220 MB) and install it into the \"clamav\" folder?\r\n"
+                + "The signature database will be downloaded automatically afterwards.",
+                "ClamAV не знайдено поруч з програмою.\r\n\r\n"
+                + "Завантажити його автоматично з GitHub (~220 МБ) і встановити в папку \"clamav\"?\r\n"
+                + "Після цього автоматично завантажаться бази сигнатур.");
+            A("status.foundArchiveExtracting", "Found a downloaded archive — extracting…", "Знайдено завантажений архів — розпаковую…");
+            A("hero.installingClamAV", "Installing ClamAV", "Установлення ClamAV");
+            A("hero.extractingArchive", "Extracting archive…", "Розпаковую архів…");
+            A("status.findingLatestClamAV", "Looking up the latest ClamAV release on GitHub…", "Шукаю останню версію ClamAV на GitHub…");
+            A("hero.findingLatestRelease", "Looking up the latest release…", "Шукаю останній реліз…");
+            A("log.downloading", "Downloading {0}\r\n", "Завантажую {0}\r\n");
+            A("status.downloadingClamAV", "Downloading ClamAV: {0} of {1} MB", "Завантаження ClamAV: {0} з {1} МБ");
+            A("status.clamAVDownloadCancelled", "ClamAV download cancelled.", "Завантаження ClamAV скасовано.");
+            A("hero.installCancelled", "Installation cancelled", "Установлення скасовано");
+            A("hero.pressUpdateRetry", "Press \"Update Database\" to try again", "Натисни «Оновити бази», щоб спробувати ще раз");
+            A("status.clamAVDownloadFailed", "Failed to download ClamAV: {0}", "Не вдалося завантажити ClamAV: {0}");
+            A("hero.downloadError", "Download error", "Помилка завантаження");
+            A("hero.checkConnectionRetry", "Check your internet connection and press \"Update Database\" again", "Перевір інтернет-з'єднання і натисни «Оновити бази» ще раз");
+            A("status.extractingClamAV", "Extracting ClamAV…", "Розпаковую ClamAV…");
+            A("err.noClamscanInArchive", "clamscan.exe not found in the archive", "В архіві немає clamscan.exe");
+            A("status.clamAVInstallError", "ClamAV installation error: {0}", "Помилка встановлення ClamAV: {0}");
+            A("hero.installError", "Installation error", "Помилка встановлення");
+            A("status.clamAVInstalled", "ClamAV installed.", "ClamAV встановлено.");
+            A("log.clamAVInstalled", "ClamAV installed ✔\r\n", "ClamAV встановлено ✔\r\n");
+
+            // DB update
+            A("msg.cooldownWarn", "The update server has temporarily rate-limited downloads from this address (HTTP 429 —\r\n"
+                + "too many requests). This will resolve on its own, expected around {0}.\r\n"
+                + "Retrying may extend the block. Try anyway?",
+                "Сервер оновлень тимчасово обмежив завантаження з цієї адреси (HTTP 429 —\r\n"
+                + "забагато запитів). Це мине саме собою, орієнтовно після {0}.\r\n"
+                + "Повторні спроби можуть подовжити блокування. Спробувати все одно?");
+            A("log.updatingDbFirstTime", "Updating the signature database (first time is ~200 MB, please wait)…\r\n\r\n", "Оновлюю бази сигнатур (перший раз це ~200 МБ, зачекай)…\r\n\r\n");
+            A("log.autoUpdating", "\r\n[{0:HH:mm}] Auto-updating database…\r\n", "\r\n[{0:HH:mm}] Автооновлення баз…\r\n");
+            A("status.autoUpdatingDb", "Auto-updating database…", "Автооновлення баз…");
+            A("status.updatingDb", "Updating database…", "Оновлення баз…");
+            A("hero.updatingDb", "Updating database", "Оновлення баз");
+            A("hero.downloadingSignatures", "Downloading signatures from database.clamav.net…", "Завантажую сигнатури з database.clamav.net…");
+            A("log.dbAlreadyCurrent", "{0}: already up to date (version {1})\r\n", "{0}: вже актуальна (версія {1})\r\n");
+            A("status.dbUpdated", "Database updated.", "Бази оновлено.");
+            A("status.dbAlreadyCurrent2", "Database already up to date.", "Бази вже актуальні.");
+            A("log.dbUpdated", "\r\nDatabase updated ✔\r\n", "\r\nБази оновлено ✔\r\n");
+            A("log.dbAlreadyCurrentLog", "\r\nDatabase already up to date ✔\r\n", "\r\nБази вже актуальні ✔\r\n");
+            A("status.updateCancelled", "Update cancelled.", "Оновлення скасовано.");
+            A("log.updateCancelled", "\r\nUpdate cancelled.\r\n", "\r\nОновлення скасовано.\r\n");
+            A("status.serverRateLimited", "Update server temporarily rate-limited us — will retry later.", "Сервер оновлень тимчасово обмежив завантаження — спробую пізніше.");
+            A("log.rateLimitedExplain", "\r\nUpdate server responded 429: too many downloads from this address.\r\n"
+                + "This is a temporary server-side limit — your internet connection is fine. The current database still works.\r\n",
+                "\r\nСервер оновлень відповів 429: забагато завантажень з цієї адреси.\r\n"
+                + "Це тимчасове обмеження сервера, з інтернетом усе гаразд. Наявні бази працюють.\r\n");
+            A("log.nextAttempt", "Next automatic attempt: after {0:HH:mm}.\r\n", "Наступна автоматична спроба — після {0:HH:mm}.\r\n");
+            A("status.updateError", "Database update error.", "Помилка оновлення баз.");
+            A("log.updateErrorDetail", "\r\nUpdate error: {0}\r\nCheck your internet connection.\r\n", "\r\nПомилка оновлення: {0}\r\nПеревір інтернет-з'єднання.\r\n");
+            A("err.notADatabaseFile", "{0}: the downloaded file doesn't look like a ClamAV database", "{0}: завантажений файл не схожий на базу ClamAV");
+            A("status.downloadingDb", "Downloading {0}: {1:0} / {2:0} MB ({3:0}%)", "Завантаження {0}: {1:0} / {2:0} МБ ({3:0}%)");
+            A("log.dbFileDownloaded", "{0} downloaded ✔\r\n", "{0} завантажено ✔\r\n");
+
+            // Misc / process / autostart
+            A("log.processStartFailed", "Failed to start {0}: {1}\r\n", "Не вдалося запустити {0}: {1}\r\n");
+            A("status.startError", "Startup error.", "Помилка запуску.");
+            A("hero.scanningTitle", "Scanning…", "Сканування…");
+            A("hero.scanningSub", "This may take a while", "Це може зайняти якийсь час");
+            A("status.autostartOn", "Autostart enabled.", "Автозапуск увімкнено.");
+            A("status.autostartOff", "Autostart disabled.", "Автозапуск вимкнено.");
+            A("log.clamscanNotFound", "clamscan.exe not found. Press \"Update Database\" to download ClamAV automatically.\r\n", "clamscan.exe не знайдено. Натисни «Оновити бази», щоб завантажити ClamAV автоматично.\r\n");
+            A("log.clamAVPath", "ClamAV: {0}\r\n", "ClamAV: {0}\r\n");
+            A("hero.clamAVNotFound", "ClamAV not found", "ClamAV не знайдено");
+            A("hero.putPortableClamAV", "Place a portable ClamAV build in the \"clamav\" folder next to the program", "Поклади portable ClamAV у папку \"clamav\" поруч з програмою");
+            A("hero.protected", "Protected", "Захищено");
+            A("hero.dbFrom", "Signature database from {0}", "Бази сигнатур від {0}");
+            A("hero.dbNeeded", "Signature database needed", "Потрібні бази сигнатур");
+            A("hero.pressUpdateFirstTime", "Press \"Update Database\" — first download is ~250 MB", "Натисни «Оновити бази» — перший раз завантажиться ~250 МБ");
+            A("tray.appUpdateInstalling", "Updating ClamAV UI to {0} — the app will restart in a few seconds…", "Оновлюю ClamAV UI до {0} — програма перезапуститься за кілька секунд…");
+            A("stats.neverScanned", "never", "ще не було");
+            A("sys.labels", "ClamAV:\r\nDB date:\r\nLast scan:\r\nScans:\r\nFiles scanned:\r\nThreats:\r\nQuarantined:", "ClamAV:\r\nБази від:\r\nОстанній скан:\r\nПеревірок:\r\nФайлів проскановано:\r\nЗагроз:\r\nУ карантині:");
+        }
+    }
+}

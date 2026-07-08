@@ -12,6 +12,9 @@ if (-not (Test-Path $csc)) { $csc = Join-Path $env:windir 'Microsoft.NET\Framewo
 # 5.1. Splatting a pre-built array sidesteps that native-argument-passing
 # difference entirely and works identically on both.
 $outExe = Join-Path $PSScriptRoot 'ClamAVUI.exe'
+# All sources live in src\ — csc stitches them into the same single portable exe
+$sources = Get-ChildItem (Join-Path $PSScriptRoot 'src') -Filter *.cs |
+    Sort-Object Name | ForEach-Object { $_.FullName }
 $cscArgs = @(
     '/nologo'
     '/target:winexe'
@@ -26,8 +29,7 @@ $cscArgs = @(
     '/r:System.Windows.Forms.dll'
     '/r:System.IO.Compression.dll'
     '/r:System.IO.Compression.FileSystem.dll'
-    (Join-Path $PSScriptRoot 'ClamUI.cs')
-)
+) + $sources
 
 & $csc @cscArgs
 
