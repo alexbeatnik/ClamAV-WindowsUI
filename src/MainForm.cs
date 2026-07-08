@@ -85,7 +85,7 @@ namespace ClamAVUI
 
         // UI
         ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog;
-        ModernButton dashQuick, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
+        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
         ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
         ListView quarList;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
@@ -229,13 +229,21 @@ namespace ClamAVUI
             SetScanEnabled(!busy && DbExists());
             btnUpdate.Enabled = !busy; // without ClamAV this button triggers its installation
             btnStop.Enabled = busy;
+            // in the dashboard hero, STOP swaps in where QUICK SCAN sits, so the
+            // running scan/update can be stopped without leaving the dashboard
+            if (dashStop != null)
+            {
+                dashStop.Visible = busy;
+                dashQuick.Visible = !busy;
+            }
             if (busy)
             {
                 progress.Start();
                 if (scanRunning) SetHero(ShieldState.Busy, Lang.T("hero.scanningTitle"), Lang.T("hero.scanningSub"));
                 if (scanRunning && !monitorScan)
                 {
-                    ShowPage(1); // manual scan — switch to the scanner page
+                    // stay on the dashboard: the hero shows the busy state and STOP,
+                    // the detailed output is one click away on the Logs tab
                     lastScanOutput = DateTime.Now;
                     scanHeartbeat.Start();
                 }

@@ -218,10 +218,20 @@ namespace ClamAVUI
                 (statusBanner.Height - dashQuick.Height) / 2);
             dashQuick.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             dashQuick.Click += delegate { RunQuickScan(); };
+            // red STOP takes QUICK SCAN's place while a scan/update runs (see SetBusy)
+            dashStop = MakeButton(Lang.T("btn.stop"), 180, Theme.Danger, Theme.DangerHot, Ico.StopIcon);
+            dashStop.Height = 44;
+            dashStop.Font = dashQuick.Font;
+            dashStop.BackColor = Theme.Card;
+            dashStop.Location = dashQuick.Location;
+            dashStop.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            dashStop.Visible = false;
+            dashStop.Click += delegate { StopCurrent(); };
             statusBanner.Controls.Add(shield);
             statusBanner.Controls.Add(heroTitle);
             statusBanner.Controls.Add(heroSub);
             statusBanner.Controls.Add(dashQuick);
+            statusBanner.Controls.Add(dashStop);
             scanButtons.Add(dashQuick);
 
             // Secondary scan tiles below the hero, icon + label like a launcher
@@ -728,6 +738,7 @@ namespace ClamAVUI
                 quarList.Columns[2].Text = Lang.T("col.when");
             }
             btnStop.Text = Lang.T("btn.stop");
+            dashStop.Text = Lang.T("btn.stop");
             btnWatchDirs.Text = Lang.T("btn.folders");
             sysNames.Text = Lang.T("sys.labels");
 
