@@ -17,8 +17,8 @@ using Microsoft.Win32;
 
 [assembly: AssemblyTitle("ClamAV UI")]
 [assembly: AssemblyProduct("ClamAV UI")]
-[assembly: AssemblyVersion("0.0.1.0")]
-[assembly: AssemblyFileVersion("0.0.1.0")]
+[assembly: AssemblyVersion("0.0.2.0")]
+[assembly: AssemblyFileVersion("0.0.2.0")]
 
 namespace ClamAVUI
 {
@@ -1118,7 +1118,7 @@ namespace ClamAVUI
     public class MainForm : Form
     {
         const string AppName = "ClamAV UI";
-        const string AppVersion = "0.0.1";
+        const string AppVersion = "0.0.2";
         const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         const string RunValueName = "ClamAVUI";
 
