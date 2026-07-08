@@ -8,9 +8,9 @@ on Win10/11).
 The interface is available in **English** (default) and **Ukrainian**, switchable
 anytime from Settings — no restart required.
 
-| Dashboard | Scanner | Settings |
-| --- | --- | --- |
-| ![Dashboard](screenshots/dashboard.png) | ![Scanner](screenshots/scanner.png) | ![Settings](screenshots/settings.png) |
+| Dashboard | Logs | Quarantine | Settings |
+| --- | --- | --- | --- |
+| ![Dashboard](screenshots/dashboard.png) | ![Logs](screenshots/logs.png) | ![Quarantine](screenshots/quarantine.png) | ![Settings](screenshots/settings.png) |
 
 ## Features
 
