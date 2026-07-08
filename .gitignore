@@ -1,0 +1,14 @@
+# Portable ClamAV (219 MB of binaries + database) — downloaded separately, see README
+clamav/
+
+# Build artifacts
+ClamAVUI.exe
+ClamAVUI.update.exe
+*.pdb
+
+# Local user settings
+settings.ini
+scans.log
+
+# Quarantine (infected files)
+quarantine/
