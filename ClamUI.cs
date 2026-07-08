@@ -17,8 +17,8 @@ using Microsoft.Win32;
 
 [assembly: AssemblyTitle("ClamAV UI")]
 [assembly: AssemblyProduct("ClamAV UI")]
-[assembly: AssemblyVersion("0.0.1.0")]
-[assembly: AssemblyFileVersion("0.0.1.0")]
+[assembly: AssemblyVersion("0.0.2.0")]
+[assembly: AssemblyFileVersion("0.0.2.0")]
 
 namespace ClamAVUI
 {
@@ -124,7 +124,8 @@ namespace ClamAVUI
 
             // Top nav tabs
             A("nav.dashboard", "Dashboard", "Огляд");
-            A("nav.scanner", "Scanner", "Сканер");
+            A("nav.logs", "Logs", "Логи");
+            A("nav.quarantine", "Quarantine", "Карантин");
             A("nav.settings", "Settings", "Налаштування");
 
             // Cards
@@ -515,6 +516,34 @@ namespace ClamAVUI
             p.AddBezier(r.X + w * .05f, r.Y + h * .10f, r.X + w * .15f, r.Y + h * .10f, r.X + w * .30f, r.Y + h * .08f, r.X + w * .50f, r.Y);
             p.CloseFigure();
             using (var pen = P(c, r, 0.09f)) g.DrawPath(pen, p);
+        }
+
+        // Radiation symbol — quarantine tab
+        public static void Radiation(Graphics g, RectangleF r, Color c)
+        {
+            float cx = r.X + r.Width / 2f, cy = r.Y + r.Height / 2f;
+            float rOuter = Math.Min(r.Width, r.Height) / 2f * 0.9f;
+            float rInner = rOuter * 0.28f;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var b = new SolidBrush(c))
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    float startAngle = -30f + i * 120f;
+                    using (var gp = new GraphicsPath())
+                    {
+                        gp.AddArc(cx - rOuter, cy - rOuter, rOuter * 2, rOuter * 2, startAngle, 60);
+                        gp.AddLine(cx + rOuter * (float)Math.Cos((startAngle + 60) * Math.PI / 180),
+                                   cy + rOuter * (float)Math.Sin((startAngle + 60) * Math.PI / 180),
+                                   cx + rInner * (float)Math.Cos((startAngle + 60) * Math.PI / 180),
+                                   cy + rInner * (float)Math.Sin((startAngle + 60) * Math.PI / 180));
+                        gp.AddArc(cx - rInner, cy - rInner, rInner * 2, rInner * 2, startAngle + 60, -60);
+                        gp.CloseFigure();
+                        g.FillPath(b, gp);
+                    }
+                }
+                g.FillEllipse(b, cx - rInner * 0.7f, cy - rInner * 0.7f, rInner * 1.4f, rInner * 1.4f);
+            }
         }
 
         // No-entry circle — exclusions
@@ -1089,7 +1118,7 @@ namespace ClamAVUI
     public class MainForm : Form
     {
         const string AppName = "ClamAV UI";
-        const string AppVersion = "0.0.1";
+        const string AppVersion = "0.0.2";
         const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         const string RunValueName = "ClamAVUI";
 
@@ -1129,7 +1158,7 @@ namespace ClamAVUI
         // New-file monitoring
         readonly List<string> watchDirs = new List<string>();
         readonly List<FileSystemWatcher> watchers = new List<FileSystemWatcher>();
-        readonly HashSet<string> pendingFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        readonly Dictionary<string, int> pendingFiles = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         Timer debounceTimer;
         bool watchInitialized; // whether the default monitored folders were already set up
         bool watchDefaultsV2;  // whether the v2 defaults (Temp, Roaming) were already added
@@ -1155,11 +1184,13 @@ namespace ClamAVUI
         };
 
         // UI
-        ModernButton btnScanFile, btnScanFolder, btnScanAll, btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnExclusions, btnScanLog;
-        ModernButton dashQuick, dashScanFile, dashScanFolder, dashScanAll, btnQuickScan, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
+        ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog;
+        ModernButton dashQuick, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
+        ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
+        ListView quarList;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
         RichTextBox log;
-        Label statusLabel, heroTitle, heroSub, statsLabel, sysNames, quarCountLabel, langLabel, lastActivityLabel;
+        Label statusLabel, heroTitle, heroSub, statsLabel, sysNames, langLabel, lastActivityLabel;
         ShieldIndicator shield;
         Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky;
         SlimMarquee progress;
@@ -1570,10 +1601,10 @@ namespace ClamAVUI
             navBar.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             navBar.BackColor = Theme.Bg;
             navBar.Padding = new Padding(0, 17, 24, 0);
-            string[] navLabelKeys = { "nav.dashboard", "nav.scanner", "nav.settings" };
-            IconDraw[] navIcons = { Ico.ShieldIcon, Ico.Search, Ico.Gear };
-            navs = new NavTab[3];
-            for (int i = 0; i < 3; i++)
+            string[] navLabelKeys = { "nav.dashboard", "nav.logs", "nav.quarantine", "nav.settings" };
+            IconDraw[] navIcons = { Ico.ShieldIcon, Ico.LogIcon, Ico.Radiation, Ico.Gear };
+            navs = new NavTab[4];
+            for (int i = 0; i < 4; i++)
             {
                 navs[i] = new NavTab(Lang.T(navLabelKeys[i]), navIcons[i]);
                 int idx = i;
@@ -1604,10 +1635,11 @@ namespace ClamAVUI
             content.Padding = new Padding(20, 8, 20, 12);
             content.BackColor = Theme.Bg;
 
-            pages = new Panel[3];
+            pages = new Panel[4];
             pages[0] = BuildDashboardPage();
-            pages[1] = BuildScannerPage();
-            pages[2] = BuildSettingsPage();
+            pages[1] = BuildLogsPage();
+            pages[2] = BuildQuarantinePage();
+            pages[3] = BuildSettingsPage();
             foreach (var p in pages) { p.Visible = false; content.Controls.Add(p); }
 
             Controls.Add(content);
@@ -1682,6 +1714,10 @@ namespace ClamAVUI
             scanBar.Controls.AddRange(new Control[] { dashQuick, dashScanFile, dashScanFolder, dashScanAll });
             scanButtons.Add(dashQuick); scanButtons.Add(dashScanFile);
             scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll);
+
+            btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
+            btnQuarantine.Click += delegate { ShowPage(2); };
+            scanBar.Controls.Add(btnQuarantine);
 
             // Status banner: wide strip instead of a square card, shield + headline
             // + subtitle laid out horizontally, with a state-colored accent bar.
@@ -1767,43 +1803,13 @@ namespace ClamAVUI
             return page;
         }
 
-        Panel BuildScannerPage()
+        Panel BuildLogsPage()
         {
             var page = new Panel();
             page.Dock = DockStyle.Fill;
             page.BackColor = Theme.Bg;
+            page.Padding = new Padding(6);
 
-            var grid = new TableLayoutPanel();
-            grid.Dock = DockStyle.Fill;
-            grid.ColumnCount = 2;
-            grid.RowCount = 1;
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 72));
-
-            // Quarantine card
-            cardQuar = new CardPanel(Lang.T("card.quarantine"));
-            cardQuar.Dock = DockStyle.Fill;
-            cardQuar.Margin = new Padding(6);
-            quarCountLabel = new Label();
-            quarCountLabel.Dock = DockStyle.Fill;
-            quarCountLabel.TextAlign = ContentAlignment.MiddleCenter;
-            quarCountLabel.Font = new Font("Segoe UI Semibold", 34f);
-            quarCountLabel.ForeColor = Theme.Text;
-            quarCountLabel.BackColor = Theme.Card;
-            quarCountLabel.Text = "0";
-            btnQuarantine = MakeLightButton(Lang.T("btn.openQuarantine"), Ico.ShieldIcon);
-            btnQuarantine.BackColor = Theme.Card;
-            btnQuarantine.Dock = DockStyle.Bottom;
-            btnQuarantine.Click += delegate { ShowQuarantine(); };
-            btnExclusions = MakeLightButton(Lang.T("btn.exclusions"), Ico.Ban);
-            btnExclusions.BackColor = Theme.Card;
-            btnExclusions.Dock = DockStyle.Bottom;
-            btnExclusions.Click += delegate { EditExclusions(); };
-            cardQuar.Controls.Add(quarCountLabel);
-            cardQuar.Controls.Add(btnQuarantine);
-            cardQuar.Controls.Add(btnExclusions);
-
-            // Scanning card
             cardScan = new CardPanel(Lang.T("card.scanning"));
             cardScan.Dock = DockStyle.Fill;
             cardScan.Margin = new Padding(6);
@@ -1813,26 +1819,11 @@ namespace ClamAVUI
             buttonsRow.Height = 42;
             buttonsRow.BackColor = Theme.Card;
 
-            btnQuickScan = MakeLightButton(Lang.T("btn.quick"), Ico.Radar);
-            btnQuickScan.Width = 105;
-            btnScanFile = MakeLightButton(Lang.T("btn.file"), Ico.FileIcon);
-            btnScanFile.Width = 90;
-            btnScanFolder = MakeLightButton(Lang.T("btn.folder"), Ico.FolderIcon);
-            btnScanFolder.Width = 100;
-            btnScanAll = MakeLightButton(Lang.T("btn.scanAll"), Ico.Stack);
-            btnScanAll.Width = 105;
             btnStop = MakeButton(Lang.T("btn.stop"), 110, Theme.Danger, Theme.DangerHot, Ico.StopIcon);
             btnStop.Enabled = false;
-
-            btnQuickScan.Click += delegate { RunQuickScan(); };
-            btnScanFile.Click += delegate { PickAndScan(false); };
-            btnScanFolder.Click += delegate { PickAndScan(true); };
-            btnScanAll.Click += delegate { RunFullScan(); };
             btnStop.Click += delegate { StopCurrent(); };
-            scanButtons.Add(btnQuickScan); scanButtons.Add(btnScanFile);
-            scanButtons.Add(btnScanFolder); scanButtons.Add(btnScanAll);
 
-            buttonsRow.Controls.AddRange(new Control[] { btnQuickScan, btnScanFile, btnScanFolder, btnScanAll, btnStop });
+            buttonsRow.Controls.Add(btnStop);
 
             log = new RichTextBox();
             log.Dock = DockStyle.Fill;
@@ -1846,11 +1837,118 @@ namespace ClamAVUI
             cardScan.Controls.Add(log);
             cardScan.Controls.Add(buttonsRow);
 
-            grid.Controls.Add(cardQuar, 0, 0);
-            grid.Controls.Add(cardScan, 1, 0);
-
-            page.Controls.Add(grid);
+            page.Controls.Add(cardScan);
             return page;
+        }
+
+        Panel BuildQuarantinePage()
+        {
+            var page = new Panel();
+            page.Dock = DockStyle.Fill;
+            page.BackColor = Theme.Bg;
+            page.Padding = new Padding(6);
+
+            cardQuar = new CardPanel(Lang.T("card.quarantine"));
+            cardQuar.Dock = DockStyle.Fill;
+            cardQuar.Margin = new Padding(6);
+
+            quarList = MakeList();
+            quarList.Columns.Add(Lang.T("col.file"), 220);
+            quarList.Columns.Add(Lang.T("col.origin"), 280);
+            quarList.Columns.Add(Lang.T("col.when"), 130);
+
+            var buttons = new FlowLayoutPanel();
+            buttons.Dock = DockStyle.Bottom;
+            buttons.FlowDirection = FlowDirection.LeftToRight;
+            buttons.Height = 50;
+            buttons.Padding = new Padding(8);
+            buttons.BackColor = Theme.Card;
+
+            btnQuarDelete = MakeButton(Lang.T("btn.deleteForever"), 170, Theme.Danger, Theme.DangerHot, Ico.Trash);
+            btnQuarRestore = MakeButton(Lang.T("btn.restore"), 120, Theme.Accent, Theme.AccentHot, Ico.Restore);
+            btnQuarToExcl = MakeButton(Lang.T("btn.toExclusions"), 125, Theme.Card, Theme.Bg, Ico.Ban);
+            btnQuarOpenFolder = MakeButton(Lang.T("btn.openFolder"), 140, Theme.Card, Theme.Bg, Ico.FolderIcon);
+            btnQuarExclusions = MakeButton(Lang.T("btn.exclusions"), 125, Theme.Card, Theme.Bg, Ico.Ban);
+
+            btnQuarRestore.Click += delegate { RestoreSelectedQuarantine(false); };
+            btnQuarToExcl.Click += delegate { RestoreSelectedQuarantine(true); };
+            btnQuarDelete.Click += delegate { DeleteSelectedQuarantine(); };
+            btnQuarOpenFolder.Click += delegate { Process.Start("explorer.exe", "\"" + quarDir + "\""); };
+            btnQuarExclusions.Click += delegate { EditExclusions(); };
+
+            buttons.Controls.AddRange(new Control[] { btnQuarRestore, btnQuarToExcl, btnQuarDelete, btnQuarOpenFolder, btnQuarExclusions });
+
+            cardQuar.Controls.Add(quarList);
+            cardQuar.Controls.Add(buttons);
+
+            page.Controls.Add(cardQuar);
+            return page;
+        }
+
+        void ReloadQuarantineList()
+        {
+            if (quarList == null) return;
+            quarList.Items.Clear();
+            var map = ReadQuarIndex();
+            foreach (string f in Directory.GetFiles(quarDir))
+            {
+                string name = Path.GetFileName(f);
+                if (string.Equals(name, "index.txt", StringComparison.OrdinalIgnoreCase)) continue;
+                string origin = Lang.T("quarantine.unknownOrigin"), when = "";
+                string[] meta;
+                if (map.TryGetValue(name, out meta)) { origin = meta[1]; when = meta[2]; }
+                var item = new ListViewItem(new string[] { name, origin, when });
+                item.Tag = f;
+                quarList.Items.Add(item);
+            }
+            UpdateStatsUi();
+        }
+
+        void RestoreSelectedQuarantine(bool excludeToo)
+        {
+            if (quarList.SelectedItems.Count == 0) return;
+            if (MessageBox.Show(this,
+                Lang.T("msg.restoreConfirm"),
+                Lang.T("quarantine.title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            foreach (ListViewItem it in quarList.SelectedItems)
+            {
+                string path = (string)it.Tag;
+                string origin = it.SubItems[1].Text;
+                if (origin == Lang.T("quarantine.unknownOrigin"))
+                {
+                    MessageBox.Show(this, string.Format(Lang.T("msg.unknownOriginPath"), it.Text), Lang.T("quarantine.title"));
+                    continue;
+                }
+                try
+                {
+                    if (File.Exists(origin))
+                    {
+                        MessageBox.Show(this, string.Format(Lang.T("msg.fileExists"), origin), Lang.T("quarantine.title"));
+                        continue;
+                    }
+                    File.Move(path, origin);
+                    RemoveQuarIndexEntry(Path.GetFileName(path));
+                    if (excludeToo) AddExclusion(origin);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, Lang.T("title.error")); }
+            }
+            if (excludeToo) SaveSettings();
+            ReloadQuarantineList();
+        }
+
+        void DeleteSelectedQuarantine()
+        {
+            if (quarList.SelectedItems.Count == 0) return;
+            if (MessageBox.Show(this,
+                string.Format(Lang.T("msg.deleteConfirm"), quarList.SelectedItems.Count),
+                Lang.T("quarantine.title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            foreach (ListViewItem it in quarList.SelectedItems)
+            {
+                string path = (string)it.Tag;
+                try { File.Delete(path); RemoveQuarIndexEntry(Path.GetFileName(path)); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, Lang.T("title.error")); }
+            }
+            ReloadQuarantineList();
         }
 
         Panel BuildSettingsPage()
@@ -1958,6 +2056,7 @@ namespace ClamAVUI
                 navs[i].SetActive(i == idx);
             }
             if (idx == 0) { UpdateStatsUi(); RefreshHistory(); }
+            if (idx == 2) { ReloadQuarantineList(); }
         }
 
         // Shows just the last line of scans.log — the full history is one click
@@ -2087,12 +2186,13 @@ namespace ClamAVUI
         void ApplyLanguage()
         {
             navs[0].Text = Lang.T("nav.dashboard");
-            navs[1].Text = Lang.T("nav.scanner");
-            navs[2].Text = Lang.T("nav.settings");
+            navs[1].Text = Lang.T("nav.logs");
+            navs[2].Text = Lang.T("nav.quarantine");
+            navs[3].Text = Lang.T("nav.settings");
 
             cardSystem.HeaderText = Lang.T("card.system"); cardSystem.Invalidate();
-            cardQuar.HeaderText = Lang.T("card.quarantine"); cardQuar.Invalidate();
-            cardScan.HeaderText = Lang.T("card.scanning"); cardScan.Invalidate();
+            if (cardQuar != null) { cardQuar.HeaderText = Lang.T("card.quarantine"); cardQuar.Invalidate(); }
+            if (cardScan != null) { cardScan.HeaderText = Lang.T("card.scanning"); cardScan.Invalidate(); }
             cardSettingsPanel.HeaderText = Lang.T("card.settings"); cardSettingsPanel.Invalidate();
 
             dashQuick.Text = Lang.T("btn.quickScan");
@@ -2102,11 +2202,17 @@ namespace ClamAVUI
             btnUpdate.Text = Lang.T("btn.updateDb");
             btnScanLog.Text = Lang.T("btn.openLog");
             btnQuarantine.Text = Lang.T("btn.openQuarantine");
-            btnExclusions.Text = Lang.T("btn.exclusions");
-            btnQuickScan.Text = Lang.T("btn.quick");
-            btnScanFile.Text = Lang.T("btn.file");
-            btnScanFolder.Text = Lang.T("btn.folder");
-            btnScanAll.Text = Lang.T("btn.scanAll");
+            if (btnQuarExclusions != null) btnQuarExclusions.Text = Lang.T("btn.exclusions");
+            if (btnQuarDelete != null) btnQuarDelete.Text = Lang.T("btn.deleteForever");
+            if (btnQuarRestore != null) btnQuarRestore.Text = Lang.T("btn.restore");
+            if (btnQuarToExcl != null) btnQuarToExcl.Text = Lang.T("btn.toExclusions");
+            if (btnQuarOpenFolder != null) btnQuarOpenFolder.Text = Lang.T("btn.openFolder");
+            if (quarList != null)
+            {
+                quarList.Columns[0].Text = Lang.T("col.file");
+                quarList.Columns[1].Text = Lang.T("col.origin");
+                quarList.Columns[2].Text = Lang.T("col.when");
+            }
             btnStop.Text = Lang.T("btn.stop");
             btnWatchDirs.Text = Lang.T("btn.folders");
             sysNames.Text = Lang.T("sys.labels");
@@ -2466,8 +2572,6 @@ namespace ClamAVUI
                 clamVersion, DbExists() ? DbDateString() : "—",
                 lastScanInfo.Length == 0 ? Lang.T("stats.neverScanned") : lastScanInfo,
                 totalScans, totalFilesScanned, totalFound, q);
-            quarCountLabel.Text = q.ToString();
-            quarCountLabel.ForeColor = q > 0 ? Theme.Warn : Theme.Text;
         }
 
         // Moves a file into quarantine manually (without clamscan --move), writes the index
@@ -2629,125 +2733,7 @@ namespace ClamAVUI
             File.WriteAllLines(quarIndex, keep.ToArray());
         }
 
-        void ShowQuarantine()
-        {
-            using (var dlg = new Form())
-            {
-                dlg.Text = Lang.T("quarantine.title");
-                dlg.Size = new Size(720, 420);
-                dlg.StartPosition = FormStartPosition.CenterParent;
-                dlg.MinimizeBox = dlg.MaximizeBox = false;
-                dlg.BackColor = Theme.Bg;
-                dlg.ForeColor = Theme.Text;
-                dlg.Font = Font;
-                Theme.DarkTitleBar(dlg);
 
-                var list = MakeList();
-                list.Columns.Add(Lang.T("col.file"), 220);
-                list.Columns.Add(Lang.T("col.origin"), 280);
-                list.Columns.Add(Lang.T("col.when"), 130);
-
-                Action reload = delegate
-                {
-                    list.Items.Clear();
-                    var map = ReadQuarIndex();
-                    foreach (string f in Directory.GetFiles(quarDir))
-                    {
-                        string name = Path.GetFileName(f);
-                        if (string.Equals(name, "index.txt", StringComparison.OrdinalIgnoreCase)) continue;
-                        string origin = Lang.T("quarantine.unknownOrigin"), when = "";
-                        string[] meta;
-                        if (map.TryGetValue(name, out meta)) { origin = meta[1]; when = meta[2]; }
-                        var item = new ListViewItem(new string[] { name, origin, when });
-                        item.Tag = f;
-                        list.Items.Add(item);
-                    }
-                    UpdateStatsUi();
-                };
-
-                var buttons = new FlowLayoutPanel();
-                buttons.Dock = DockStyle.Bottom;
-                buttons.FlowDirection = FlowDirection.RightToLeft;
-                buttons.Height = 50;
-                buttons.Padding = new Padding(8);
-                buttons.BackColor = Theme.Bg;
-
-                var close = MakeButton(Lang.T("btn.close"), 90, Theme.Card, Theme.Bg, Ico.Close);
-                close.DialogResult = DialogResult.Cancel;
-                var del = MakeButton(Lang.T("btn.deleteForever"), 170, Theme.Danger, Theme.DangerHot, Ico.Trash);
-                var restore = MakeButton(Lang.T("btn.restore"), 120, Theme.Accent, Theme.AccentHot, Ico.Restore);
-                var toExcl = MakeButton(Lang.T("btn.toExclusions"), 125, Theme.Card, Theme.Bg, Ico.Ban);
-
-                // Restores a file to its original location; excludeToo also adds it to
-                // exclusions so future scans leave it alone
-                Action<bool> restoreSelected = delegate(bool excludeToo)
-                {
-                    if (list.SelectedItems.Count == 0) return;
-                    if (MessageBox.Show(dlg,
-                        Lang.T("msg.restoreConfirm"),
-                        Lang.T("quarantine.title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                    foreach (ListViewItem it in list.SelectedItems)
-                    {
-                        string path = (string)it.Tag;
-                        string origin = it.SubItems[1].Text;
-                        if (origin == Lang.T("quarantine.unknownOrigin"))
-                        {
-                            MessageBox.Show(dlg, string.Format(Lang.T("msg.unknownOriginPath"), it.Text), Lang.T("quarantine.title"));
-                            continue;
-                        }
-                        try
-                        {
-                            if (File.Exists(origin))
-                            {
-                                MessageBox.Show(dlg, string.Format(Lang.T("msg.fileExists"), origin), Lang.T("quarantine.title"));
-                                continue;
-                            }
-                            File.Move(path, origin);
-                            RemoveQuarIndexEntry(Path.GetFileName(path));
-                            if (excludeToo) AddExclusion(origin);
-                        }
-                        catch (Exception ex) { MessageBox.Show(dlg, ex.Message, Lang.T("title.error")); }
-                    }
-                    if (excludeToo) SaveSettings();
-                    reload();
-                };
-
-                restore.Click += delegate { restoreSelected(false); };
-                toExcl.Click += delegate { restoreSelected(true); };
-
-                del.Click += delegate
-                {
-                    if (list.SelectedItems.Count == 0) return;
-                    if (MessageBox.Show(dlg,
-                        string.Format(Lang.T("msg.deleteConfirm"), list.SelectedItems.Count),
-                        Lang.T("quarantine.title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                    foreach (ListViewItem it in list.SelectedItems)
-                    {
-                        string path = (string)it.Tag;
-                        try { File.Delete(path); RemoveQuarIndexEntry(Path.GetFileName(path)); }
-                        catch (Exception ex) { MessageBox.Show(dlg, ex.Message, Lang.T("title.error")); }
-                    }
-                    reload();
-                };
-
-                var openDir = MakeButton(Lang.T("btn.openFolder"), 140, Theme.Card, Theme.Bg, Ico.FolderIcon);
-                openDir.Click += delegate { Process.Start("explorer.exe", "\"" + quarDir + "\""); };
-
-                buttons.Controls.Add(close);
-                buttons.Controls.Add(del);
-                buttons.Controls.Add(restore);
-                buttons.Controls.Add(toExcl);
-                buttons.Controls.Add(openDir);
-
-                dlg.Controls.Add(list);
-                dlg.Controls.Add(buttons);
-                dlg.CancelButton = close;
-
-                reload();
-                dlg.ShowDialog(this);
-            }
-            UpdateStatsUi();
-        }
 
         // ---------- Path lists ----------
 
@@ -3043,7 +3029,7 @@ namespace ClamAVUI
             if (chkRiskyOnly != null && chkRiskyOnly.Checked && !RiskyExtensions.Contains(ext)) return;
             foreach (string t in TempExtensions)
                 if (ext == t) return; // file still downloading: wait for the rename
-            pendingFiles.Add(path);
+            pendingFiles[path] = 0;
             debounceTimer.Stop();
             debounceTimer.Start(); // restart: scan once the stream of new files settles down
         }
@@ -3052,15 +3038,23 @@ namespace ClamAVUI
         {
             if (scanRunning || updateRunning || !DbExists()) return; // try again on the next tick
             var ready = new List<string>();
-            var stillLocked = new List<string>();
-            foreach (string f in pendingFiles)
+            var stillLocked = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, int> kvp in pendingFiles)
             {
+                string f = kvp.Key;
+                int retries = kvp.Value;
                 if (!File.Exists(f)) continue;
-                if (IsFileLocked(f)) { stillLocked.Add(f); continue; }
+                if (IsFileLocked(f))
+                {
+                    if (retries < 10) // max 10 retries (~30 seconds)
+                        stillLocked[f] = retries + 1;
+                    continue;
+                }
                 ready.Add(f);
             }
             pendingFiles.Clear();
-            foreach (string f in stillLocked) pendingFiles.Add(f);
+            foreach (KeyValuePair<string, int> kvp in stillLocked)
+                pendingFiles[kvp.Key] = kvp.Value;
             if (pendingFiles.Count == 0) debounceTimer.Stop();
             if (ready.Count > 0) ScanFileBatch(ready);
         }
@@ -3073,7 +3067,7 @@ namespace ClamAVUI
                     return false;
             }
             catch (IOException) { return true; }
-            catch (UnauthorizedAccessException) { return true; }
+            catch (UnauthorizedAccessException) { return false; } // not locked, just inaccessible
         }
 
         void ScanFileBatch(List<string> files)
@@ -3091,7 +3085,7 @@ namespace ClamAVUI
             args.Append("-r --stdout -d ").Append(Quote(dbDir)).Append(MoveArg()).Append(ExcludeArg()).Append(ScanLimitsArg());
             try
             {
-                string lp = Path.Combine(Path.GetTempPath(), "clamui-batch.txt");
+                string lp = Path.Combine(Path.GetTempPath(), "clamui-batch-" + Guid.NewGuid().ToString("N") + ".txt");
                 File.WriteAllLines(lp, files.ToArray(), new UTF8Encoding(false));
                 batchListPaths.Add(lp);
                 args.Append(" --file-list=").Append(Quote(lp));
@@ -3274,7 +3268,8 @@ namespace ClamAVUI
                 {
                     string dest = Path.Combine(dbDir, url.Substring(url.LastIndexOf('/') + 1));
                     long local = LocalCvdVersion(dest);
-                    long remote = RemoteCvdVersion(url);
+                    long remote = 0;
+                    try { remote = RemoteCvdVersion(url); } catch { }
                     if (remote > 0 && remote > local) { newer = true; break; }
                 }
                 bool fresh = newer;
@@ -3808,7 +3803,7 @@ namespace ClamAVUI
         {
             CleanupBatchLists();
             string tmp = Path.GetTempPath();
-            string fullList = Path.Combine(tmp, "clamui-list.txt");
+            string fullList = Path.Combine(tmp, "clamui-list-" + Guid.NewGuid().ToString("N") + ".txt");
             try
             {
                 File.WriteAllLines(fullList, files.ToArray(), new UTF8Encoding(false));
@@ -3842,7 +3837,7 @@ namespace ClamAVUI
                 for (int i = 0; i < n && i * per < files.Count; i++)
                 {
                     var slice = files.GetRange(i * per, Math.Min(per, files.Count - i * per));
-                    string cp = Path.Combine(tmp, "clamui-list" + (i + 1) + ".txt");
+                    string cp = Path.Combine(tmp, "clamui-list-" + (i + 1) + "-" + Guid.NewGuid().ToString("N") + ".txt");
                     try { File.WriteAllLines(cp, slice.ToArray(), new UTF8Encoding(false)); }
                     catch { chunks.Clear(); break; } // failed — fall back to a single process
                     chunks.Add(cp);
@@ -4292,14 +4287,17 @@ namespace ClamAVUI
                     string name = url.Substring(url.LastIndexOf('/') + 1);
                     string dest = Path.Combine(dbDir, name);
                     long localVer = LocalCvdVersion(dest);
-                    long remoteVer = RemoteCvdVersion(url);
+                    long remoteVer = RemoteCvdVersion(url); // Let it throw
                     if (localVer > 0 && remoteVer > 0 && localVer >= remoteVer)
                     {
                         UiLog(string.Format(Lang.T("log.dbAlreadyCurrent"), name, localVer), Theme.Muted);
                         continue;
                     }
-                    DownloadCvd(url, dest, name);
-                    updated++;
+                    if (remoteVer > 0 || localVer == 0)
+                    {
+                        DownloadCvd(url, dest, name);
+                        updated++;
+                    }
                 }
             }
             catch (Exception ex)
@@ -4389,22 +4387,18 @@ namespace ClamAVUI
 
         static long RemoteCvdVersion(string url)
         {
-            try
+            var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
+            req.UserAgent = "ClamAV/1.5.3";
+            req.Timeout = 30000;
+            req.AddRange(0, 511);
+            using (var resp = req.GetResponse())
+            using (var rs = resp.GetResponseStream())
             {
-                var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
-                req.UserAgent = "ClamAV/1.5.3";
-                req.Timeout = 30000;
-                req.AddRange(0, 511);
-                using (var resp = req.GetResponse())
-                using (var rs = resp.GetResponseStream())
-                {
-                    var buf = new byte[512];
-                    int total = 0, r;
-                    while (total < 512 && (r = rs.Read(buf, total, 512 - total)) > 0) total += r;
-                    return CvdVersionFromHeader(buf, total);
-                }
+                var buf = new byte[512];
+                int total = 0, r;
+                while (total < 512 && (r = rs.Read(buf, total, 512 - total)) > 0) total += r;
+                return CvdVersionFromHeader(buf, total);
             }
-            catch { return 0; }
         }
 
         void DownloadCvd(string url, string dest, string name)
@@ -4413,47 +4407,55 @@ namespace ClamAVUI
             req.UserAgent = "ClamAV/1.5.3";
             req.Timeout = 30000;
             string part = dest + ".part";
-            using (var resp = (System.Net.HttpWebResponse)req.GetResponse())
-            using (var rs = resp.GetResponseStream())
-            using (var fs = new FileStream(part, FileMode.Create, FileAccess.Write))
+            try
             {
-                rs.ReadTimeout = 45000; // abort a stalled connection instead of waiting forever
-                long total = resp.ContentLength;
-                long got = 0;
-                var buf = new byte[65536];
-                int read;
-                DateTime lastUi = DateTime.MinValue;
-                while ((read = rs.Read(buf, 0, buf.Length)) > 0)
+                using (var resp = (System.Net.HttpWebResponse)req.GetResponse())
+                using (var rs = resp.GetResponseStream())
+                using (var fs = new FileStream(part, FileMode.Create, FileAccess.Write))
                 {
-                    if (cancelUpdate) throw new Exception(CancelledMarker);
-                    fs.Write(buf, 0, read);
-                    got += read;
-                    if ((DateTime.Now - lastUi).TotalMilliseconds > 250)
+                    rs.ReadTimeout = 45000; // abort a stalled connection instead of waiting forever
+                    long total = resp.ContentLength;
+                    long got = 0;
+                    var buf = new byte[65536];
+                    int read;
+                    DateTime lastUi = DateTime.MinValue;
+                    while ((read = rs.Read(buf, 0, buf.Length)) > 0)
                     {
-                        lastUi = DateTime.Now;
-                        long g = got, t = total;
-                        try
+                        if (cancelUpdate) throw new Exception(CancelledMarker);
+                        fs.Write(buf, 0, read);
+                        got += read;
+                        if ((DateTime.Now - lastUi).TotalMilliseconds > 250)
                         {
-                            BeginInvoke((Action)delegate
+                            lastUi = DateTime.Now;
+                            long g = got, t = total;
+                            try
                             {
-                                if (t > 0) progress.SetFraction((double)g / t);
-                                statusLabel.Text = string.Format(Lang.T("status.downloadingDb"),
-                                    name, g / 1048576.0, t / 1048576.0, t > 0 ? g * 100.0 / t : 0);
-                            });
+                                BeginInvoke((Action)delegate
+                                {
+                                    if (t > 0) progress.SetFraction((double)g / t);
+                                    statusLabel.Text = string.Format(Lang.T("status.downloadingDb"),
+                                        name, g / 1048576.0, t / 1048576.0, t > 0 ? g * 100.0 / t : 0);
+                                });
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
                 }
+                // the server might have returned an error page instead of the database — check the CVD header
+                if (LocalCvdVersion(part) <= 0)
+                {
+                    TryDelete(part);
+                    throw new Exception(string.Format(Lang.T("err.notADatabaseFile"), name));
+                }
+                if (File.Exists(dest)) File.Delete(dest);
+                File.Move(part, dest);
+                UiLog(string.Format(Lang.T("log.dbFileDownloaded"), name), Theme.Good);
             }
-            // the server might have returned an error page instead of the database — check the CVD header
-            if (LocalCvdVersion(part) <= 0)
+            catch
             {
                 TryDelete(part);
-                throw new Exception(string.Format(Lang.T("err.notADatabaseFile"), name));
+                throw;
             }
-            if (File.Exists(dest)) File.Delete(dest);
-            File.Move(part, dest);
-            UiLog(string.Format(Lang.T("log.dbFileDownloaded"), name), Theme.Good);
         }
 
         // Thread-safe logging from a background thread
