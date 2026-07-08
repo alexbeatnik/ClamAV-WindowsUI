@@ -20,20 +20,24 @@ namespace ClamAVUI
         // ---------- Self-update: check GitHub Releases for a newer ClamAVUI.exe ----------
 
         const string UpdateApiUrl = "https://api.github.com/repos/alexbeatnik/ClamAV-WindowsUI/releases/latest";
-        DateTime lastAppUpdateCheck; // time of the last daily check (persisted)
+        // Every 4 hours: the GitHub API allows 60 unauthenticated requests/hour per
+        // address, so 6 tiny requests a day are nowhere near any limit — unlike the
+        // ClamAV database CDN (see dbCooldownUntil), which does rate-limit (429).
+        const int AppUpdateCheckHours = 4;
+        DateTime lastAppUpdateCheck; // time of the last check (persisted)
         bool checkingAppUpdate;      // a check/download is already in flight
 
         void MaybeCheckAppUpdate()
         {
             if (checkingAppUpdate || scanRunning || updateRunning) return;
-            if ((DateTime.Now - lastAppUpdateCheck).TotalHours < 24) return;
+            if ((DateTime.Now - lastAppUpdateCheck).TotalHours < AppUpdateCheckHours) return;
             checkingAppUpdate = true;
             System.Threading.ThreadPool.QueueUserWorkItem(delegate { AppUpdateWorker(); });
         }
 
         // Checks the latest GitHub release and, if it's newer than AppVersion, downloads
         // its ClamAVUI.exe asset next to the current one. Runs entirely off the UI thread;
-        // network failures are silent (retried on the next daily check).
+        // network failures are silent (retried on the next scheduled check).
         void AppUpdateWorker()
         {
             string downloadedExe = null, version = null;

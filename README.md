@@ -72,7 +72,7 @@ anytime from Settings — no restart required.
   (or shows an "Update Database" button if auto-update is off). If the
   update server responds with HTTP 429 (rate limited), the app backs off
   for a while instead of retrying immediately
-- **Self-updating**: once a day the app also checks this repo's latest
+- **Self-updating**: every 4 hours the app also checks this repo's latest
   GitHub Release; if it's newer, it downloads the new `ClamAVUI.exe`,
   shows a tray notification, and swaps itself in on restart — no manual
   download needed. Works in both portable and installed-to-Program-Files

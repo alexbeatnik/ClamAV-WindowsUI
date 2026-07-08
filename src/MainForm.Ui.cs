@@ -141,8 +141,9 @@ namespace ClamAVUI
             debounceTimer.Interval = 3000;
             debounceTimer.Tick += OnDebounceTick;
 
-            // Auto-update: first check 15s after startup, then the timer ticks hourly,
-            // but the actual version check runs no more than once a day
+            // Auto-update: first check 15s after startup, then the timer ticks hourly.
+            // The actual checks are throttled further: database versions once a day
+            // (the CDN rate-limits), app releases on GitHub every 4 hours
             autoUpdateTimer = new Timer();
             autoUpdateTimer.Interval = 15000;
             autoUpdateTimer.Tick += delegate
