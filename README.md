@@ -8,9 +8,21 @@ toolchains** — builds with the `csc.exe` compiler already built into Windows
 The interface is available in **English** (default) and **Ukrainian**, switchable
 anytime from Settings — no restart required.
 
-| Dashboard | Logs | Quarantine | Settings |
-| --- | --- | --- | --- |
-| ![Dashboard](screenshots/dashboard.png) | ![Logs](screenshots/logs.png) | ![Quarantine](screenshots/quarantine.png) | ![Settings](screenshots/settings.png) |
+### Dashboard
+
+![Dashboard](screenshots/dashboard.png)
+
+### Logs
+
+![Logs](screenshots/logs.png)
+
+### Quarantine
+
+![Quarantine](screenshots/quarantine.png)
+
+### Settings
+
+![Settings](screenshots/settings.png)
 
 ## Features
 
