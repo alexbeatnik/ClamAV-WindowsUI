@@ -22,8 +22,8 @@ namespace ClamAVUI
         {
             Text = AppName;
             Icon = AppIcon;
-            MinimumSize = new Size(860, 580);
-            Size = new Size(920, 640);
+            MinimumSize = new Size(880, 620); // the taller hero + tiles need the room
+            Size = new Size(940, 680);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
@@ -186,53 +186,63 @@ namespace ClamAVUI
             page.Dock = DockStyle.Fill;
             page.BackColor = Theme.Bg;
 
-            // Scan action cards — always visible on the dashboard, icon + label like a launcher
+            // Hero status banner — the commercial-AV centerpiece: a large glowing
+            // shield, big headline, and the primary QUICK SCAN action right inside
+            // it (the "one big obvious button" every commercial dashboard leads with).
+            statusBanner = new StatusBanner();
+            statusBanner.Dock = DockStyle.Top;
+            statusBanner.Height = 104;
+            statusBanner.Width = 880; // pre-size so the Anchor.Right button keeps its margin
+            statusBanner.Margin = new Padding(6, 4, 6, 4);
+            shield = new ShieldIndicator();
+            shield.Size = new Size(66, 66);
+            shield.Location = new Point(22, 17);
+            shield.BackColor = Theme.Card;
+            heroTitle = new Label();
+            heroTitle.AutoSize = true;
+            heroTitle.Location = new Point(102, 22);
+            heroTitle.Font = new Font("Segoe UI Semibold", 15f);
+            heroTitle.ForeColor = Theme.Text;
+            heroTitle.BackColor = Theme.Card;
+            heroSub = new Label();
+            heroSub.AutoSize = true;
+            heroSub.Location = new Point(104, 56);
+            heroSub.Font = Font;
+            heroSub.ForeColor = Theme.Muted;
+            heroSub.BackColor = Theme.Card;
+            dashQuick = MakeButton(Lang.T("btn.quickScan"), 180, Theme.Accent, Theme.AccentHot, Ico.Radar);
+            dashQuick.Height = 44;
+            dashQuick.Font = new Font("Segoe UI Semibold", 10f);
+            dashQuick.BackColor = Theme.Card;
+            dashQuick.Location = new Point(statusBanner.Width - dashQuick.Width - 28,
+                (statusBanner.Height - dashQuick.Height) / 2);
+            dashQuick.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            dashQuick.Click += delegate { RunQuickScan(); };
+            statusBanner.Controls.Add(shield);
+            statusBanner.Controls.Add(heroTitle);
+            statusBanner.Controls.Add(heroSub);
+            statusBanner.Controls.Add(dashQuick);
+            scanButtons.Add(dashQuick);
+
+            // Secondary scan tiles below the hero, icon + label like a launcher
             var scanBar = new FlowLayoutPanel();
             scanBar.Dock = DockStyle.Top;
             scanBar.Height = 112;
             scanBar.Padding = new Padding(6, 4, 6, 2);
             scanBar.BackColor = Theme.Bg;
-            dashQuick = MakeCardButton(Lang.T("btn.quickScan"), Theme.Accent, Theme.AccentHot, Theme.Text, Ico.Radar);
-            dashQuick.Click += delegate { RunQuickScan(); };
             dashScanFile = MakeCardButton(Lang.T("btn.scanFileDash"), Theme.Card, Theme.CardLine, Theme.Text, Ico.FileIcon);
             dashScanFile.Click += delegate { PickAndScan(false); };
             dashScanFolder = MakeCardButton(Lang.T("btn.scanFolderDash"), Theme.Card, Theme.CardLine, Theme.Text, Ico.FolderIcon);
             dashScanFolder.Click += delegate { PickAndScan(true); };
             dashScanAll = MakeCardButton(Lang.T("btn.scanAll"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Stack);
             dashScanAll.Click += delegate { RunFullScan(); };
-            scanBar.Controls.AddRange(new Control[] { dashQuick, dashScanFile, dashScanFolder, dashScanAll });
-            scanButtons.Add(dashQuick); scanButtons.Add(dashScanFile);
+            scanBar.Controls.AddRange(new Control[] { dashScanFile, dashScanFolder, dashScanAll });
+            scanButtons.Add(dashScanFile);
             scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll);
 
             btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
             btnQuarantine.Click += delegate { ShowPage(2); };
             scanBar.Controls.Add(btnQuarantine);
-
-            // Status banner: wide strip instead of a square card, shield + headline
-            // + subtitle laid out horizontally, with a state-colored accent bar.
-            statusBanner = new StatusBanner();
-            statusBanner.Dock = DockStyle.Top;
-            statusBanner.Height = 78;
-            statusBanner.Margin = new Padding(6, 4, 6, 4);
-            shield = new ShieldIndicator();
-            shield.Size = new Size(48, 48);
-            shield.Location = new Point(20, 15);
-            shield.BackColor = Theme.Card;
-            heroTitle = new Label();
-            heroTitle.AutoSize = true;
-            heroTitle.Location = new Point(84, 15);
-            heroTitle.Font = new Font("Segoe UI Semibold", 12.5f);
-            heroTitle.ForeColor = Theme.Text;
-            heroTitle.BackColor = Theme.Card;
-            heroSub = new Label();
-            heroSub.AutoSize = true;
-            heroSub.Location = new Point(85, 42);
-            heroSub.Font = Font;
-            heroSub.ForeColor = Theme.Muted;
-            heroSub.BackColor = Theme.Card;
-            statusBanner.Controls.Add(shield);
-            statusBanner.Controls.Add(heroTitle);
-            statusBanner.Controls.Add(heroSub);
 
             // System card: stats plus the (conditionally visible) update button —
             // folded together instead of a separate "Updates" card
@@ -268,7 +278,7 @@ namespace ClamAVUI
             activityRow.Dock = DockStyle.Top;
             activityRow.Height = 56;
             activityRow.Margin = new Padding(6, 4, 6, 4);
-            activityRow.Padding = new Padding(20, 0, 8, 0);
+            activityRow.Padding = new Padding(20, 2, 10, 8); // bottom inset keeps children off the card shadow
             activityRow.AccentColor = Theme.Accent;
             lastActivityLabel = new Label();
             lastActivityLabel.Dock = DockStyle.Fill;
@@ -285,10 +295,12 @@ namespace ClamAVUI
             activityRow.Controls.Add(lastActivityLabel);
             activityRow.Controls.Add(btnScanLog);
 
+            // Dock=Top stacks in reverse add order: hero banner first, then the
+            // scan tiles, the system card, and the last-activity strip
             page.Controls.Add(activityRow);
             page.Controls.Add(cardSystem);
-            page.Controls.Add(statusBanner);
             page.Controls.Add(scanBar);
+            page.Controls.Add(statusBanner);
             return page;
         }
 

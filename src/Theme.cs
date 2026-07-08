@@ -24,18 +24,19 @@ namespace ClamAVUI
         public static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
     }
 
-    // Dark theme palette
+    // Dark theme palette — deep navy-tinted surfaces + vivid accents, the look
+    // commercial AV dashboards (Bitdefender/Norton-class) use on dark themes
     static class Theme
     {
-        public static readonly Color Bg        = Color.FromArgb(23, 24, 28);    // window background
-        public static readonly Color Card      = Color.FromArgb(35, 37, 43);    // cards
-        public static readonly Color CardLine  = Color.FromArgb(52, 55, 63);    // thin card border
-        public static readonly Color LogBg     = Color.FromArgb(16, 17, 20);    // log/list background
-        public static readonly Color Text      = Color.FromArgb(230, 232, 236);
-        public static readonly Color Muted     = Color.FromArgb(154, 161, 173);
-        public static readonly Color Accent    = Color.FromArgb(59, 130, 246);  // blue
-        public static readonly Color AccentHot = Color.FromArgb(106, 161, 248);
-        public static readonly Color Good      = Color.FromArgb(35, 165, 90);   // green shield
+        public static readonly Color Bg        = Color.FromArgb(16, 18, 24);    // window background
+        public static readonly Color Card      = Color.FromArgb(30, 33, 42);    // cards
+        public static readonly Color CardLine  = Color.FromArgb(48, 52, 64);    // thin card border
+        public static readonly Color LogBg     = Color.FromArgb(12, 13, 18);    // log/list background
+        public static readonly Color Text      = Color.FromArgb(232, 234, 240);
+        public static readonly Color Muted     = Color.FromArgb(148, 155, 170);
+        public static readonly Color Accent    = Color.FromArgb(66, 133, 255);  // blue
+        public static readonly Color AccentHot = Color.FromArgb(108, 160, 255);
+        public static readonly Color Good      = Color.FromArgb(48, 199, 110);  // green shield
         public static readonly Color Warn      = Color.FromArgb(232, 197, 71);  // yellow (values)
         public static readonly Color Danger    = Color.FromArgb(239, 68, 68);
         public static readonly Color DangerHot = Color.FromArgb(248, 113, 113);
@@ -43,7 +44,7 @@ namespace ClamAVUI
         public static readonly Color Btn       = Color.FromArgb(216, 219, 226); // light buttons
         public static readonly Color BtnHot    = Color.FromArgb(233, 235, 240);
         public static readonly Color BtnText   = Color.FromArgb(51, 54, 62);
-        public const int Radius = 10; // card corner radius
+        public const int Radius = 12; // card corner radius
 
         public static GraphicsPath Round(RectangleF r, float rad)
         {
@@ -55,6 +56,25 @@ namespace ClamAVUI
             p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
             p.CloseFigure();
             return p;
+        }
+
+        // Elevated card surface: soft drop shadow under the panel, fill, hairline
+        // border, and a 1px top highlight — reads as depth on a dark background.
+        // Draws within the control's own bounds (w × h), leaving room for the shadow.
+        public static void PaintCard(Graphics g, int w, int h)
+        {
+            var r = new RectangleF(1.5f, 0.5f, w - 4, h - 6);
+            for (int i = 1; i <= 4; i++)
+                using (var path = Round(new RectangleF(r.X, r.Y + i, r.Width, r.Height), Radius))
+                using (var b = new SolidBrush(Color.FromArgb(13, 0, 0, 0)))
+                    g.FillPath(b, path);
+            using (var path = Round(r, Radius))
+            {
+                using (var b = new SolidBrush(Card)) g.FillPath(b, path);
+                using (var pen = new Pen(CardLine)) g.DrawPath(pen, path);
+            }
+            using (var hl = new Pen(Color.FromArgb(16, 255, 255, 255)))
+                g.DrawLine(hl, r.X + Radius, r.Y + 1, r.Right - Radius, r.Y + 1);
         }
 
         [DllImport("dwmapi.dll")]

@@ -30,7 +30,7 @@ namespace ClamAVUI
             Back = back; Hover = hover; TextColor = fore;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
                 | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-            Height = 34;
+            Height = 36;
             Width = 150;
             Font = new Font("Segoe UI Semibold", 9f);
             Cursor = Cursors.Hand;
@@ -64,10 +64,17 @@ namespace ClamAVUI
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(BackColor); // background behind the rounded corners (card color when on a card)
-            Color c = !Enabled ? Theme.Disabled : (down ? Back : (over ? Hover : Back));
-            using (var path = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 1, Height - 1), CardStyle ? 12 : 8))
+            // disabled = dark surface with muted text (not a bright gray slab)
+            Color c = !Enabled ? Color.FromArgb(36, 39, 48) : (down ? Back : (over ? Hover : Back));
+            using (var path = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 1, Height - 1), CardStyle ? 14 : 9))
             using (var b = new SolidBrush(c))
+            {
                 g.FillPath(b, path);
+                // hairline border gives card-style tiles (and disabled buttons) definition
+                if (CardStyle || !Enabled)
+                    using (var pen = new Pen(over && Enabled ? Theme.Accent : Theme.CardLine))
+                        g.DrawPath(pen, path);
+            }
 
             Color fg = Enabled ? TextColor : Theme.Muted;
             if (Icon == null)
@@ -241,6 +248,25 @@ namespace ClamAVUI
             }
 
             float w = Width, h = Height;
+
+            // Soft radial glow in the state color behind the shield — the "status
+            // lighting" look commercial AV dashboards use around their hero icon
+            using (var gp = new GraphicsPath())
+            {
+                gp.AddEllipse(0, 0, w, h);
+                using (var pgb = new PathGradientBrush(gp))
+                {
+                    pgb.CenterColor = Color.FromArgb(55, c);
+                    pgb.SurroundColors = new Color[] { Color.FromArgb(0, c) };
+                    g.FillPath(pgb, gp);
+                }
+            }
+            // inset the shield so the glow has room around it; the transform keeps
+            // all the glyph coordinates below in the original 0..w/0..h space
+            const float inset = 0.10f;
+            g.TranslateTransform(w * inset, h * inset);
+            g.ScaleTransform(1 - inset * 2, 1 - inset * 2);
+
             using (var path = ShieldPath(w, h))
             {
                 using (var b = new SolidBrush(c)) g.FillPath(b, path);
@@ -279,8 +305,7 @@ namespace ClamAVUI
         }
     }
 
-    // Sidebar navigation icon: shield / crosshair / gear
-    // Horizontal top-bar nav tab: icon + label, active state = accent underline.
+    // Horizontal top-bar nav tab: icon + label, active state = filled accent pill.
     // Deliberately not a left icon rail (that shape reads as a clone of the reference
     // Synology-style AV UIs this project used to imitate) — top tabs with text instead.
     class NavTab : Control
@@ -314,19 +339,22 @@ namespace ClamAVUI
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(Theme.Bg);
-            if (hover && !Active) // soft hover highlight, no highlight once active (underline reads active)
-                using (var path = Theme.Round(new RectangleF(2, 5, Width - 4, Height - 12), 8))
-                using (var b = new SolidBrush(Color.FromArgb(14, 255, 255, 255)))
+            // active tab = filled accent pill (the current commercial-dashboard idiom);
+            // hover on inactive tabs = soft white pill
+            var pill = new RectangleF(1, 6, Width - 2, Height - 14);
+            if (Active)
+                using (var path = Theme.Round(pill, pill.Height / 2f))
+                using (var b = new SolidBrush(Color.FromArgb(34, Theme.Accent)))
                     g.FillPath(b, path);
-            Color c = Active ? Theme.Text : (hover ? Theme.Text : Theme.Muted);
-            var iconRect = new RectangleF(14, (Height - 8 - 18) / 2f, 18, 18);
+            else if (hover)
+                using (var path = Theme.Round(pill, pill.Height / 2f))
+                using (var b = new SolidBrush(Color.FromArgb(13, 255, 255, 255)))
+                    g.FillPath(b, path);
+            Color c = Active ? Theme.AccentHot : (hover ? Theme.Text : Theme.Muted);
+            var iconRect = new RectangleF(15, (Height - 8 - 18) / 2f, 18, 18);
             if (Icon != null) Icon(g, iconRect, c);
             var textRect = new Rectangle((int)iconRect.Right + 8, 0, Width - (int)iconRect.Right - 16, Height - 8);
             TextRenderer.DrawText(g, Text, Font, textRect, c, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
-            if (Active)
-                using (var b = new SolidBrush(Theme.Accent))
-                using (var path = Theme.Round(new RectangleF(10, Height - 3, Width - 20, 3), 1.5f))
-                    g.FillPath(b, path);
         }
     }
 
@@ -349,13 +377,9 @@ namespace ClamAVUI
             base.OnPaint(e);
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var path = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 1, Height - 1), Theme.Radius))
-            {
-                using (var b = new SolidBrush(Theme.Card)) g.FillPath(b, path);
-                using (var pen = new Pen(Theme.CardLine)) g.DrawPath(pen, path);
-            }
+            Theme.PaintCard(g, Width, Height);
             using (var b = new SolidBrush(AccentColor))
-            using (var path = Theme.Round(new RectangleF(0, Height * 0.22f, 4, Height * 0.56f), 2))
+            using (var path = Theme.Round(new RectangleF(1, Height * 0.22f, 5, Height * 0.56f), 2.5f))
                 g.FillPath(b, path);
         }
     }
@@ -379,11 +403,7 @@ namespace ClamAVUI
             base.OnPaint(e);
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var path = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 1, Height - 1), Theme.Radius))
-            {
-                using (var b = new SolidBrush(Theme.Card)) g.FillPath(b, path);
-                using (var pen = new Pen(Theme.CardLine)) g.DrawPath(pen, path);
-            }
+            Theme.PaintCard(g, Width, Height);
             using (var f = new Font("Segoe UI Semibold", 9.5f))
             using (var b = new SolidBrush(Theme.Muted))
                 g.DrawString(HeaderText.ToUpperInvariant(), f, b, 16, 15);
