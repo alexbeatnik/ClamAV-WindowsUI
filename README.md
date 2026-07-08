@@ -1,16 +1,28 @@
 # ClamAV Windows UI
 
 A lightweight graphical interface for [ClamAV](https://www.clamav.net/) on Windows.
-Single-file source, ~300 KB exe, **zero dependencies and zero toolchains** — builds
-with the `csc.exe` compiler already built into Windows (.NET Framework 4.8, present
-on Win10/11).
+Plain C# sources, a single ~300 KB portable exe, **zero dependencies and zero
+toolchains** — builds with the `csc.exe` compiler already built into Windows
+(.NET Framework 4.8, present on Win10/11).
 
 The interface is available in **English** (default) and **Ukrainian**, switchable
 anytime from Settings — no restart required.
 
-| Dashboard | Logs | Quarantine | Settings |
-| --- | --- | --- | --- |
-| ![Dashboard](screenshots/dashboard.png) | ![Logs](screenshots/logs.png) | ![Quarantine](screenshots/quarantine.png) | ![Settings](screenshots/settings.png) |
+### Dashboard
+
+![Dashboard](screenshots/dashboard.png)
+
+### Logs
+
+![Logs](screenshots/logs.png)
+
+### Quarantine
+
+![Quarantine](screenshots/quarantine.png)
+
+### Settings
+
+![Settings](screenshots/settings.png)
 
 ## Features
 
@@ -48,7 +60,12 @@ anytime from Settings — no restart required.
   action per file: **quarantine / delete / exclude**. The "Auto-quarantine"
   checkbox moves files without asking (`clamscan --move`)
 - **Quarantine**: view, restore, permanently delete, or restore straight
-  **to exclusions** (so it's never flagged again)
+  **to exclusions** (so it's never flagged again). Quarantined files are
+  stored **neutralized** (every byte XOR 0xFF, `.quar` extension), so they
+  can't be launched accidentally and a resident AV (Windows Defender) won't
+  detect and rip files out of the quarantine folder; restoring reverses the
+  transform. The dashboard quarantine card shows a live counter of files
+  currently in quarantine
 - **Exclusions**: a file can be removed from the exclusion list, deleted
   from disk, or sent **to quarantine**
 - **Statistics**: number of scans, threats found, and files in quarantine
@@ -67,7 +84,7 @@ anytime from Settings — no restart required.
   (or shows an "Update Database" button if auto-update is off). If the
   update server responds with HTTP 429 (rate limited), the app backs off
   for a while instead of retrying immediately
-- **Self-updating**: once a day the app also checks this repo's latest
+- **Self-updating**: every 4 hours the app also checks this repo's latest
   GitHub Release; if it's newer, it downloads the new `ClamAVUI.exe`,
   shows a tray notification, and swaps itself in on restart — no manual
   download needed. Works in both portable and installed-to-Program-Files
@@ -81,6 +98,19 @@ anytime from Settings — no restart required.
 
 The script calls `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe` —
 nothing needs to be installed. Output: `ClamAVUI.exe`.
+
+## Tests
+
+```powershell
+.\test.ps1
+```
+
+Unit tests use the same zero-toolchain approach: `tests\*.cs` contains a tiny
+test runner (no NuGet, no xUnit) that is compiled together with `src\*.cs`
+into a console `ClamAVUI.Tests.exe` and executed. Covered: the quarantine
+XOR transform and index, `.cvd` header parsing, path/quoting helpers, the
+risky-extension filter, and the language table. CI runs them on every pull
+request (`.github/workflows/tests.yml`).
 
 ## Installing on a new PC
 
@@ -104,7 +134,7 @@ database and quarantine during installation (nothing is downloaded again).
 ## Releases
 
 `.github/workflows/release.yml` builds `ClamAVUI.exe` and publishes it as a
-GitHub Release whenever `AssemblyVersion` in `ClamUI.cs` changes on `main`
+GitHub Release whenever `AssemblyVersion` in `src/AssemblyInfo.cs` changes on `main`
 (bump the version, push, and a `vX.Y.Z` tag + release with the exe attached
 appear automatically). It no-ops if that version was already released, and
 can also be triggered manually from the Actions tab.
@@ -112,18 +142,35 @@ can also be triggered manually from the Actions tab.
 ## Structure
 
 ```
-ClamUI.cs      — the entire application (WinForms, C# 5)
+src/                       — the application (WinForms, C# 5), compiled into one exe
+  AssemblyInfo.cs          — assembly metadata (the version lives here)
+  Theme.cs                 — dark palette, rounded corners, dark title bar interop
+  Lang.cs                  — English/Ukrainian string table
+  Icons.cs                 — vector glyphs drawn with GDI+ (no image assets)
+  Controls.cs              — custom-drawn buttons, toggles, cards, nav tabs
+  MainForm.cs              — state fields, entry point, process plumbing, autostart
+  MainForm.Ui.cs           — pages and UI construction, language switching
+  MainForm.Install.cs      — install/uninstall to Program Files, ACL fixes
+  MainForm.Settings.cs     — locating ClamAV, settings load/save
+  MainForm.Quarantine.cs   — quarantine storage, index, threat dialog
+  MainForm.Monitor.cs      — folder monitoring, exclusions
+  MainForm.Scan.cs         — scans, progress/ETA, clamd engine
+  MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
+tests/                     — unit tests + the zero-dependency test runner
 clamav.ico     — app icon (exe + window + tray), ClamAV logo
 logo.png       — header logo (embedded in the exe as a resource)
 build.ps1      — builds the app with the built-in csc.exe
+test.ps1       — builds and runs the unit tests (ClamAVUI.Tests.exe)
 settings.ini   — settings and statistics (created automatically)
-quarantine/    — quarantine: infected files + index.txt with origin paths
+quarantine/    — quarantine: neutralized (.quar) files + index.txt with origin paths
 clamav/        — portable ClamAV (not in git, downloaded separately)
 ClamAVUI.exe   — build output (not in git)
 ```
 
-> **Warning:** files under `quarantine/` are infected and moved there as-is.
-> Don't run anything from that folder; delete or restore files via the UI.
+> **Note:** files under `quarantine/` are stored neutralized — every byte is
+> XOR-ed with 0xFF and the file gets a `.quar` extension, so nothing there can
+> run and other antiviruses won't react to the folder. Still, don't copy files
+> out of it by hand; restore or delete them via the UI.
 
 ## How monitoring works
 
