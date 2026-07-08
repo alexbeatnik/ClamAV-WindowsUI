@@ -60,7 +60,7 @@ namespace ClamAVUI
         // Limits so clamscan doesn't bog down on gigabyte-sized files and deep archives —
         // those used to make a full scan "hang" on a single file for minutes. Malware that
         // ClamAV catches is almost always small, so this barely affects detection.
-        static string ScanLimitsArg()
+        internal static string ScanLimitsArg()
         {
             return " --max-filesize=50M --max-scansize=100M --max-recursion=6 --max-files=5000"
                  + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
@@ -68,7 +68,7 @@ namespace ClamAVUI
 
         // ---------- Progress, log, auto-update ----------
 
-        static string FormatSpan(TimeSpan t)
+        internal static string FormatSpan(TimeSpan t)
         {
             if (t.TotalHours >= 1) return string.Format(Lang.T("time.hm"), Math.Floor(t.TotalHours), t.Minutes);
             if (t.TotalMinutes >= 1) return string.Format(Lang.T("time.ms"), Math.Floor(t.TotalMinutes), t.Seconds);
@@ -222,7 +222,7 @@ namespace ClamAVUI
         bool updateAvailable;  // the server has a newer database — show the update button
 
         // Quotes a command-line argument; a trailing \ before the quote must be doubled
-        static string Quote(string path)
+        internal static string Quote(string path)
         {
             if (path.EndsWith("\\")) path += "\\";
             return "\"" + path + "\"";
@@ -248,7 +248,7 @@ namespace ClamAVUI
 
         // True if path is root itself or lies inside it. A plain StartsWith would not
         // work: "C:\Program Files" would also match "C:\Program Files (x86)".
-        static bool IsUnder(string path, string root)
+        internal static bool IsUnder(string path, string root)
         {
             root = root.TrimEnd('\\');
             if (root.Length == 0) return false;
@@ -803,7 +803,7 @@ namespace ClamAVUI
             string finalName = Path.GetFileName(moved);
             try
             {
-                string dest = UniqueQuarPath(finalName);
+                string dest = UniqueQuarPath(quarDir, finalName);
                 XorCopy(moved, dest);
                 File.Delete(moved);
                 finalName = Path.GetFileName(dest);

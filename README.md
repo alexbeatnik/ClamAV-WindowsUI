@@ -87,6 +87,19 @@ anytime from Settings — no restart required.
 The script calls `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe` —
 nothing needs to be installed. Output: `ClamAVUI.exe`.
 
+## Tests
+
+```powershell
+.\test.ps1
+```
+
+Unit tests use the same zero-toolchain approach: `tests\*.cs` contains a tiny
+test runner (no NuGet, no xUnit) that is compiled together with `src\*.cs`
+into a console `ClamAVUI.Tests.exe` and executed. Covered: the quarantine
+XOR transform and index, `.cvd` header parsing, path/quoting helpers, the
+risky-extension filter, and the language table. CI runs them on every pull
+request (`.github/workflows/tests.yml`).
+
 ## Installing on a new PC
 
 Just **copy the single `ClamAVUI.exe`** into any folder and run it.
@@ -131,9 +144,11 @@ src/                       — the application (WinForms, C# 5), compiled into o
   MainForm.Monitor.cs      — folder monitoring, exclusions
   MainForm.Scan.cs         — scans, progress/ETA, clamd engine
   MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
+tests/                     — unit tests + the zero-dependency test runner
 clamav.ico     — app icon (exe + window + tray), ClamAV logo
 logo.png       — header logo (embedded in the exe as a resource)
 build.ps1      — builds the app with the built-in csc.exe
+test.ps1       — builds and runs the unit tests (ClamAVUI.Tests.exe)
 settings.ini   — settings and statistics (created automatically)
 quarantine/    — quarantine: neutralized (.quar) files + index.txt with origin paths
 clamav/        — portable ClamAV (not in git, downloaded separately)

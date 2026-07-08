@@ -4,6 +4,7 @@ clamav/
 # Build artifacts
 ClamAVUI.exe
 ClamAVUI.update.exe
+ClamAVUI.Tests.exe
 *.pdb
 
 # Local user settings

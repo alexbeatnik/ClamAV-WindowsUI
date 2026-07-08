@@ -68,7 +68,7 @@ namespace ClamAVUI
 
         // Potentially dangerous types: executables, scripts, installers, archives,
         // and documents with macros — where real-world malware actually shows up.
-        static readonly HashSet<string> RiskyExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        internal static readonly HashSet<string> RiskyExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // executables and libraries
             ".exe", ".dll", ".sys", ".com", ".scr", ".cpl", ".ocx", ".drv", ".efi",

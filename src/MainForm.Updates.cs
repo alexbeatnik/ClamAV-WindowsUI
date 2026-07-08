@@ -419,7 +419,7 @@ namespace ClamAVUI
         }
 
         // Database version from the 512-byte CVD header ("ClamAV-VDB:date:version:...")
-        static long CvdVersionFromHeader(byte[] head, int len)
+        internal static long CvdVersionFromHeader(byte[] head, int len)
         {
             try
             {
@@ -431,7 +431,7 @@ namespace ClamAVUI
             return 0;
         }
 
-        static long LocalCvdVersion(string path)
+        internal static long LocalCvdVersion(string path)
         {
             if (!File.Exists(path)) return 0;
             try

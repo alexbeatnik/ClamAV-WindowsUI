@@ -404,7 +404,7 @@ namespace ClamAVUI
             catch { return; }
             NeutralizeQuarantineFolder(); // pick up legacy/raw files before listing
             quarList.Items.Clear();
-            var map = ReadQuarIndex();
+            var map = ReadQuarIndex(quarIndex);
             foreach (string f in Directory.GetFiles(quarDir))
             {
                 string name = Path.GetFileName(f);
@@ -452,7 +452,7 @@ namespace ClamAVUI
                     }
                     else
                         File.Move(path, origin); // raw legacy file — plain move
-                    RemoveQuarIndexEntry(Path.GetFileName(path));
+                    RemoveQuarIndexEntry(quarIndex, Path.GetFileName(path));
                     if (excludeToo) AddExclusion(origin);
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, Lang.T("title.error")); }
@@ -470,7 +470,7 @@ namespace ClamAVUI
             foreach (ListViewItem it in quarList.SelectedItems)
             {
                 string path = (string)it.Tag;
-                try { File.Delete(path); RemoveQuarIndexEntry(Path.GetFileName(path)); }
+                try { File.Delete(path); RemoveQuarIndexEntry(quarIndex, Path.GetFileName(path)); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, Lang.T("title.error")); }
             }
             ReloadQuarantineList();

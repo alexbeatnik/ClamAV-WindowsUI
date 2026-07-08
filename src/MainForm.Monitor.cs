@@ -349,7 +349,7 @@ namespace ClamAVUI
             if (ready.Count > 0) ScanFileBatch(ready);
         }
 
-        static bool IsFileLocked(string path)
+        internal static bool IsFileLocked(string path)
         {
             try
             {

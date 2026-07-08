@@ -23,9 +23,9 @@ namespace ClamAVUI
         // extension. The bytes on disk are no longer the malware body, so a resident AV
         // (e.g. Windows Defender) doesn't detect and "steal" files out of our quarantine,
         // and the file can't be launched accidentally. The same XOR restores the original.
-        const string QuarExt = ".quar";
+        internal const string QuarExt = ".quar";
 
-        static void XorCopy(string src, string dst)
+        internal static void XorCopy(string src, string dst)
         {
             using (var fin = File.OpenRead(src))
             using (var fout = new FileStream(dst, FileMode.CreateNew, FileAccess.Write))
@@ -41,13 +41,13 @@ namespace ClamAVUI
         }
 
         // A free "name.quar" (or "name(2).quar") slot inside the quarantine folder
-        string UniqueQuarPath(string originalName)
+        internal static string UniqueQuarPath(string dir, string originalName)
         {
-            string dest = Path.Combine(quarDir, originalName + QuarExt);
+            string dest = Path.Combine(dir, originalName + QuarExt);
             int i = 1;
             while (File.Exists(dest))
             {
-                dest = Path.Combine(quarDir, originalName + "(" + i + ")" + QuarExt);
+                dest = Path.Combine(dir, originalName + "(" + i + ")" + QuarExt);
                 i++;
             }
             return dest;
@@ -67,7 +67,7 @@ namespace ClamAVUI
                 if (name.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase)) continue;
                 try
                 {
-                    string dest = UniqueQuarPath(name);
+                    string dest = UniqueQuarPath(quarDir, name);
                     XorCopy(f, dest);
                     File.Delete(f);
                     renames[name] = Path.GetFileName(dest);
@@ -122,7 +122,7 @@ namespace ClamAVUI
         {
             try
             {
-                string dest = UniqueQuarPath(Path.GetFileName(path));
+                string dest = UniqueQuarPath(quarDir, Path.GetFileName(path));
                 XorCopy(path, dest);
                 try { File.Delete(path); }
                 catch { TryDelete(dest); throw; } // source still there — don't leave two copies
@@ -248,11 +248,11 @@ namespace ClamAVUI
             UpdateStatsUi();
         }
 
-        Dictionary<string, string[]> ReadQuarIndex()
+        internal static Dictionary<string, string[]> ReadQuarIndex(string indexPath)
         {
             var map = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-            if (!File.Exists(quarIndex)) return map;
-            foreach (string line in File.ReadAllLines(quarIndex))
+            if (!File.Exists(indexPath)) return map;
+            foreach (string line in File.ReadAllLines(indexPath))
             {
                 string[] parts = line.Split('|');
                 if (parts.Length >= 3) map[parts[0]] = parts;
@@ -260,14 +260,14 @@ namespace ClamAVUI
             return map;
         }
 
-        void RemoveQuarIndexEntry(string fileName)
+        internal static void RemoveQuarIndexEntry(string indexPath, string fileName)
         {
-            if (!File.Exists(quarIndex)) return;
+            if (!File.Exists(indexPath)) return;
             var keep = new List<string>();
-            foreach (string line in File.ReadAllLines(quarIndex))
+            foreach (string line in File.ReadAllLines(indexPath))
                 if (!line.StartsWith(fileName + "|", StringComparison.OrdinalIgnoreCase))
                     keep.Add(line);
-            File.WriteAllLines(quarIndex, keep.ToArray());
+            File.WriteAllLines(indexPath, keep.ToArray());
         }
 
 
