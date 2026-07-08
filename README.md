@@ -34,11 +34,13 @@ anytime from Settings — no restart required.
 - **Auto-check for new files**: monitors folders — a new file appears →
   it's scanned automatically, with the result shown as a tray notification.
   Default folders: Downloads, Desktop, `Program Files` and
-  `Program Files (x86)`, `%TEMP%`, and `AppData\Roaming` (common places
-  droppers get extracted to and where malware persists). `C:\Windows\Temp`
-  is deliberately not watched: on a non-elevated process (which this app
-  always is outside `--install`/`--uninstall`) Windows can deny even
-  read access to it, so a `FileSystemWatcher` on it reliably fails.
+  `Program Files (x86)`, `%TEMP%`, `AppData\Roaming`, and `C:\Windows\Temp`
+  (common places droppers get extracted to and where malware persists).
+  `C:\Windows\Temp` is only added if it's actually readable: on hardened
+  systems a non-elevated process can be denied even read access to it, so
+  the app checks first and skips it there instead of letting the
+  `FileSystemWatcher` fail. Settings offers a one-click fix to restore
+  access on such machines, after which it's watched automatically.
   By default only **potentially dangerous file types** are scanned (exe,
   dll, scripts, installers, archives, documents with macros) — the filter
   can be turned off in Settings
