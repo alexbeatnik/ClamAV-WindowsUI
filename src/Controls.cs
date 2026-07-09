@@ -20,6 +20,7 @@ namespace ClamAVUI
         public Color Back, Hover, TextColor;
         public IconDraw Icon;   // optional glyph; null = text-only button
         public bool CardStyle;  // icon centered above the text, for the big dashboard actions
+        public string SubText;  // muted one-line caption under the label (card-style tiles only)
         public int Badge;       // red counter bubble over the icon corner (0 = hidden)
         bool over, down;
         DialogResult dialogResult = DialogResult.None;
@@ -104,9 +105,23 @@ namespace ClamAVUI
                             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
                     }
                 }
-                var textRect = new Rectangle(4, (int)(iconRect.Bottom + 10), Width - 8, Height - (int)(iconRect.Bottom + 10) - 6);
-                TextRenderer.DrawText(g, Text, Font, textRect, fg,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
+                int textTop = (int)(iconRect.Bottom + 10);
+                if (string.IsNullOrEmpty(SubText))
+                {
+                    var textRect = new Rectangle(4, textTop, Width - 8, Height - textTop - 6);
+                    TextRenderer.DrawText(g, Text, Font, textRect, fg,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
+                }
+                else
+                {
+                    // label on one line + a muted caption below (dashboard action tiles)
+                    TextRenderer.DrawText(g, Text, Font, new Rectangle(4, textTop - 2, Width - 8, 17), fg,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
+                    using (var sf = new Font("Segoe UI", 7.75f))
+                        TextRenderer.DrawText(g, SubText, sf, new Rectangle(4, textTop + 16, Width - 8, 15),
+                            Enabled ? Theme.Muted : Color.FromArgb(100, 106, 120),
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
+                }
             }
             else
             {
@@ -379,8 +394,9 @@ namespace ClamAVUI
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             Theme.PaintCard(g, Width, Height);
+            // slim status accent — a wider bar reads as a stuck progress bar
             using (var b = new SolidBrush(AccentColor))
-            using (var path = Theme.Round(new RectangleF(1, Height * 0.22f, 5, Height * 0.56f), 2.5f))
+            using (var path = Theme.Round(new RectangleF(1, Height * 0.22f, 3, Height * 0.56f), 1.5f))
                 g.FillPath(b, path);
         }
     }
@@ -408,7 +424,7 @@ namespace ClamAVUI
             g.SmoothingMode = SmoothingMode.AntiAlias;
             Theme.PaintCard(g, Width, Height);
             using (var capF = new Font("Segoe UI Semibold", 8f))
-            using (var valF = new Font("Segoe UI Semibold", 11f))
+            using (var valF = new Font("Segoe UI Semibold", 13.5f)) // values carry the row — keep them prominent
             {
                 float x = 20;
                 for (int i = 0; i < Captions.Length; i++)
@@ -417,11 +433,11 @@ namespace ClamAVUI
                     string val = i < Values.Length ? Values[i] : "";
                     int cell = Math.Max(TextRenderer.MeasureText(g, cap, capF).Width,
                                         TextRenderer.MeasureText(g, val, valF).Width);
-                    TextRenderer.DrawText(g, cap, capF, new Rectangle((int)x, 12, cell + 4, 15),
+                    TextRenderer.DrawText(g, cap, capF, new Rectangle((int)x, 11, cell + 4, 15),
                         Theme.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
                     Color vc = ValueColors != null && i < ValueColors.Length && !ValueColors[i].IsEmpty
                         ? ValueColors[i] : Theme.Text;
-                    TextRenderer.DrawText(g, val, valF, new Rectangle((int)x, 29, cell + 4, 24),
+                    TextRenderer.DrawText(g, val, valF, new Rectangle((int)x, 28, cell + 4, 28),
                         vc, TextFormatFlags.Left | TextFormatFlags.NoPadding);
                     x += cell + 28;
                 }

@@ -100,7 +100,7 @@ namespace ClamAVUI
         NotifyIcon tray;
         ToolStripItem trayOpenItem, trayExitItem;
         StatusBanner statusBanner, activityRow;
-        StatStrip statStrip;
+        StatStrip statStrip, dbStrip;
         CardPanel cardQuar, cardScan, cardSettingsPanel;
         Panel[] pages;
         NavTab[] navs;

@@ -124,6 +124,14 @@ namespace ClamAVUI
                 q > 0 ? Theme.Warn : Color.Empty
             };
             statStrip.Invalidate();
+            if (dbStrip != null)
+            {
+                string[] caps, vals;
+                DbStripData(out caps, out vals);
+                dbStrip.Captions = caps;
+                dbStrip.Values = vals;
+                dbStrip.Invalidate();
+            }
             if (btnQuarantine != null && btnQuarantine.Badge != q)
             {
                 btnQuarantine.Badge = q;

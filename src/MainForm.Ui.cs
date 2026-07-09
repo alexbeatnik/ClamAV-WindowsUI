@@ -22,8 +22,8 @@ namespace ClamAVUI
         {
             Text = AppName;
             Icon = AppIcon;
-            MinimumSize = new Size(900, 600);
-            Size = new Size(940, 640);
+            MinimumSize = new Size(900, 700);
+            Size = new Size(940, 720);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
@@ -63,21 +63,21 @@ namespace ClamAVUI
             var logo = new PictureBox();
             logo.Image = LogoImage;
             logo.SizeMode = PictureBoxSizeMode.Zoom;
-            logo.Size = new Size(132, 62);
-            logo.Location = new Point(20, 10);
+            logo.Size = new Size(154, 72);
+            logo.Location = new Point(20, 3);
             logo.BackColor = Color.Transparent;
             var titleText = new Label();
             titleText.Text = "ClamAV UI";
             titleText.Font = new Font("Segoe UI Semibold", 17f);
             titleText.ForeColor = Theme.Text;
             titleText.AutoSize = true;
-            titleText.Location = new Point(168, 20);
+            titleText.Location = new Point(190, 20);
             var verText = new Label();
             verText.Text = "v" + AppVersion;
-            verText.Font = new Font("Segoe UI", 9.5f);
+            verText.Font = new Font("Segoe UI", 8f); // small and quiet — it's a detail, not a headline
             verText.ForeColor = Theme.Muted;
             verText.AutoSize = true;
-            verText.Location = new Point(171, 50);
+            verText.Location = new Point(193, 52);
             title.Controls.Add(logo);
             title.Controls.Add(titleText);
             title.Controls.Add(verText);
@@ -255,12 +255,16 @@ namespace ClamAVUI
             scanBar.RowCount = 1;
             scanBar.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             dashScanFile = MakeCardButton(Lang.T("btn.scanFileDash"), Theme.Card, Theme.CardLine, Theme.Text, Ico.FileIcon);
+            dashScanFile.SubText = Lang.T("btn.scanFileSub");
             dashScanFile.Click += delegate { PickAndScan(false); };
             dashScanFolder = MakeCardButton(Lang.T("btn.scanFolderDash"), Theme.Card, Theme.CardLine, Theme.Text, Ico.FolderIcon);
+            dashScanFolder.SubText = Lang.T("btn.scanFolderSub");
             dashScanFolder.Click += delegate { PickAndScan(true); };
             dashScanAll = MakeCardButton(Lang.T("btn.scanAll"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Stack);
+            dashScanAll.SubText = Lang.T("btn.scanAllSub");
             dashScanAll.Click += delegate { RunFullScan(); };
             btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
+            btnQuarantine.SubText = Lang.T("btn.quarantineSub");
             btnQuarantine.Click += delegate { ShowPage(2); };
             var rowTiles = new ModernButton[] { dashScanFile, dashScanFolder, dashScanAll, btnQuarantine };
             for (int i = 0; i < rowTiles.Length; i++)
@@ -287,6 +291,13 @@ namespace ClamAVUI
             btnUpdate.Click += delegate { RunFreshclam(); };
             statStrip.Controls.Add(btnUpdate);
 
+            // Database strip: per-file signature versions + total signature count —
+            // fills the formerly empty band between the action tiles and the activity row
+            dbStrip = new StatStrip();
+            dbStrip.Dock = DockStyle.Top;
+            dbStrip.Height = 66;
+            dbStrip.Padding = new Padding(0, 10, 12, 14);
+
             // Last-activity strip: one line instead of a scrollable log card — the
             // full history is one click away via "Open Log File", so the dashboard
             // doesn't need to dedicate a big scrollable panel to it.
@@ -303,7 +314,8 @@ namespace ClamAVUI
             lastActivityLabel.ForeColor = Theme.Muted;
             lastActivityLabel.BackColor = Theme.Card;
             lastActivityLabel.TextAlign = ContentAlignment.MiddleLeft;
-            btnScanLog = MakeLightButton(Lang.T("btn.openLog"), Ico.LogIcon);
+            // dark secondary button — a light one here outshines the primary actions above
+            btnScanLog = MakeButton(Lang.T("btn.openLog"), 235, Theme.Bg, Theme.CardLine, Ico.LogIcon);
             btnScanLog.BackColor = Theme.Card;
             btnScanLog.Dock = DockStyle.Right;
             btnScanLog.Margin = new Padding(0, 0, 0, 0);
@@ -311,9 +323,10 @@ namespace ClamAVUI
             activityRow.Controls.Add(lastActivityLabel);
             activityRow.Controls.Add(btnScanLog);
 
-            // Dock=Top stacks in reverse add order: the big tile mosaic first,
-            // then the action tiles, the stat strip, and the last-activity strip
+            // Dock=Top stacks in reverse add order: the big tile mosaic first, then the
+            // action tiles, the stat strip, the database strip, and the last-activity strip
             page.Controls.Add(activityRow);
+            page.Controls.Add(dbStrip);
             page.Controls.Add(statStrip);
             page.Controls.Add(scanBar);
             page.Controls.Add(topGrid);
@@ -795,11 +808,15 @@ namespace ClamAVUI
 
             dashQuick.Text = Lang.T("btn.quickScan");
             dashScanFile.Text = Lang.T("btn.scanFileDash");
+            dashScanFile.SubText = Lang.T("btn.scanFileSub");
             dashScanFolder.Text = Lang.T("btn.scanFolderDash");
+            dashScanFolder.SubText = Lang.T("btn.scanFolderSub");
             dashScanAll.Text = Lang.T("btn.scanAll");
+            dashScanAll.SubText = Lang.T("btn.scanAllSub");
             btnUpdate.Text = Lang.T("btn.updateDb");
             btnScanLog.Text = Lang.T("btn.openLog");
             btnQuarantine.Text = Lang.T("btn.openQuarantine");
+            btnQuarantine.SubText = Lang.T("btn.quarantineSub");
             if (btnQuarExclusions != null) btnQuarExclusions.Text = Lang.T("btn.exclusions");
             if (btnQuarDelete != null) btnQuarDelete.Text = Lang.T("btn.deleteForever");
             if (btnQuarRestore != null) btnQuarRestore.Text = Lang.T("btn.restore");

@@ -21,6 +21,18 @@ namespace ClamAVUI.Tests
             Assert.Equal(27710L, MainForm.CvdVersionFromHeader(h, h.Length), "version field");
         }
 
+        public static void TestParsesSignatureCountField()
+        {
+            byte[] h = Header("ClamAV-VDB:21 Jan 2026 10-33 -0500:27710:2075164:63:...");
+            Assert.Equal(2075164L, MainForm.CvdFieldFromHeader(h, h.Length, 3), "signature count field");
+        }
+
+        public static void TestMissingFieldIndexReturnsZero()
+        {
+            byte[] h = Header("ClamAV-VDB:date:27710");
+            Assert.Equal(0L, MainForm.CvdFieldFromHeader(h, h.Length, 3), "field index past the last part");
+        }
+
         public static void TestGarbageReturnsZero()
         {
             byte[] h = Header("<html>404 not found</html>");

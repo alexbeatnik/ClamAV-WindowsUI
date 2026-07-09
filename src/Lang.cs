@@ -67,8 +67,12 @@ namespace ClamAVUI
             // Buttons
             A("btn.quickScan", "QUICK SCAN", "ШВИДКИЙ СКАН");
             A("btn.scanFileDash", "SCAN FILE", "СКАНУВАТИ ФАЙЛ");
+            A("btn.scanFileSub", "Choose a single file", "Перевірити один файл");
             A("btn.scanFolderDash", "SCAN FOLDER", "СКАНУВАТИ ПАПКУ");
+            A("btn.scanFolderSub", "Scan any directory", "Перевірити будь-яку папку");
             A("btn.scanAll", "FULL PC", "ВЕСЬ ПК");
+            A("btn.scanAllSub", "All local drives", "Усі локальні диски");
+            A("btn.quarantineSub", "Isolated threats", "Ізольовані загрози");
             A("btn.updateDb", "UPDATE DATABASE", "ОНОВИТИ БАЗИ");
             A("btn.openLog", "OPEN LOG FILE", "ВІДКРИТИ ФАЙЛ ЖУРНАЛУ");
             A("btn.openQuarantine", "OPEN QUARANTINE", "ВІДКРИТИ КАРАНТИН");
@@ -356,6 +360,7 @@ namespace ClamAVUI
             A("stat.files", "Files scanned", "Файлів перевірено");
             A("stat.threats", "Threats", "Загроз");
             A("stat.quarantined", "Quarantined", "У карантині");
+            A("stat.signatures", "Signatures", "Сигнатур");
         }
     }
 }
