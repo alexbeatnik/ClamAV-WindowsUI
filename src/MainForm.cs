@@ -411,7 +411,7 @@ namespace ClamAVUI
         internal static string ProgressBarText(double f)
         {
             const int cells = 18;
-            int full = (int)Math.Round(Math.Max(0, Math.Min(1, f)) * cells);
+            int full = (int)Math.Floor(Math.Max(0, Math.Min(1, f)) * cells);
             return new string('█', full) + new string('░', cells - full);
         }
 
