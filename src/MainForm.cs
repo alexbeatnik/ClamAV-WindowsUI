@@ -18,7 +18,7 @@ namespace ClamAVUI
     public partial class MainForm : Form
     {
         const string AppName = "ClamAV UI";
-        const string AppVersion = "0.0.4";
+        static readonly string AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
         const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         const string RunValueName = "ClamAVUI";
 
@@ -41,6 +41,7 @@ namespace ClamAVUI
 
         // Progress: total file count (computed in the background), generation to cancel counting
         int totalToScan;
+        int initialFilesToScan;
         int countGen;
         DateTime scanStart;
         DateTime rateWinTime = DateTime.MinValue;     // start of the moving window used to estimate rate

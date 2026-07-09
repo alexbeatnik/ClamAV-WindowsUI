@@ -295,6 +295,7 @@ namespace ClamAVUI
             // Scan output / results
             A("status.scannedFound", "Scanned: {0}, threats found: {1}", "Скановано: {0}, знайдено загроз: {1}");
             A("log.summary", "\r\nSummary: scanned {0} files in {1}, threats found: {2}\r\n", "\r\nПідсумок: проскановано {0} файлів за {1}, знайдено загроз: {2}\r\n");
+            A("log.skippedExplanation", "Some calculated files ({0}) were skipped (e.g. system files, excluded folders, or locked in exclusive use by other programs).\r\n", "Частину обрахованих файлів ({0}) було пропущено (наприклад, системні файли, виключені папки або файли, що заблоковані іншими програмами).\r\n");
             A("status.doneClean", "Done. Scanned: {0}. No threats found.", "Готово. Скановано: {0}. Загроз не знайдено.");
             A("log.newFilesClean", "New files are clean ✔\r\n", "Нові файли чисті ✔\r\n");
             A("tray.newFilesClean", "Checked new files: {0} — clean.", "Перевірено нових файлів: {0} — чисто.");

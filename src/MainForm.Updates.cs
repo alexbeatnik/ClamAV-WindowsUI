@@ -41,9 +41,11 @@ namespace ClamAVUI
         void AppUpdateWorker()
         {
             string downloadedExe = null, version = null;
+            bool success = false;
             try
             {
-                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
+                const System.Net.SecurityProtocolType Tls13 = (System.Net.SecurityProtocolType)12288;
+                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | Tls13;
                 string json;
                 using (var api = new System.Net.WebClient())
                 {
@@ -52,36 +54,44 @@ namespace ClamAVUI
                 }
                 var vm = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"v?([\\d.]+)\"");
                 var um = Regex.Match(json, "\"browser_download_url\"\\s*:\\s*\"([^\"]*ClamAVUI\\.exe)\"");
-                if (vm.Success && um.Success && new Version(vm.Groups[1].Value) > new Version(AppVersion))
+                if (vm.Success && um.Success)
                 {
-                    version = vm.Groups[1].Value;
-                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                    string updatePath = Path.Combine(baseDir, "ClamAVUI.update.exe");
-                    TryDelete(updatePath); // leftover from an earlier interrupted attempt
-                    using (var wc = new System.Net.WebClient())
+                    success = true;
+                    if (new Version(vm.Groups[1].Value) > new Version(AppVersion))
                     {
-                        wc.Headers.Add("User-Agent", "ClamAVUI");
-                        wc.DownloadFile(um.Groups[1].Value, updatePath);
+                        version = vm.Groups[1].Value;
+                        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                        string updatePath = Path.Combine(baseDir, "ClamAVUI.update.exe");
+                        TryDelete(updatePath); // leftover from an earlier interrupted attempt
+                        using (var wc = new System.Net.WebClient())
+                        {
+                            wc.Headers.Add("User-Agent", "ClamAVUI");
+                            wc.DownloadFile(um.Groups[1].Value, updatePath);
+                        }
+                        // sanity check: a real build is ~300 KB, an error page/HTML redirect is not
+                        if (File.Exists(updatePath) && new FileInfo(updatePath).Length > 50 * 1024)
+                            downloadedExe = updatePath;
+                        else
+                            TryDelete(updatePath);
                     }
-                    // sanity check: a real build is ~300 KB, an error page/HTML redirect is not
-                    if (File.Exists(updatePath) && new FileInfo(updatePath).Length > 50 * 1024)
-                        downloadedExe = updatePath;
-                    else
-                        TryDelete(updatePath);
                 }
             }
             catch { } // offline, rate-limited, or no releases yet — try again tomorrow
 
             string fp = downloadedExe, fv = version;
-            try { BeginInvoke((Action)delegate { OnAppUpdateChecked(fp, fv); }); }
+            bool s = success;
+            try { BeginInvoke((Action)delegate { OnAppUpdateChecked(fp, fv, s); }); }
             catch { }
         }
 
-        void OnAppUpdateChecked(string updatePath, string version)
+        void OnAppUpdateChecked(string updatePath, string version, bool success)
         {
             checkingAppUpdate = false;
-            lastAppUpdateCheck = DateTime.Now;
-            SaveSettings();
+            if (success)
+            {
+                lastAppUpdateCheck = DateTime.Now;
+                SaveSettings();
+            }
             if (updatePath == null) return;
             if (scanRunning || updateRunning) { TryDelete(updatePath); return; } // busy — retried tomorrow
             ApplyAppUpdate(updatePath, version);
@@ -175,7 +185,8 @@ namespace ClamAVUI
 
             SetBusy(true, Lang.T("status.findingLatestClamAV"));
             SetHero(ShieldState.Busy, Lang.T("hero.installingClamAV"), Lang.T("hero.findingLatestRelease"));
-            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
+            const System.Net.SecurityProtocolType Tls13 = (System.Net.SecurityProtocolType)12288;
+            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | Tls13;
 
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
@@ -341,7 +352,8 @@ namespace ClamAVUI
 
         void DbUpdateWorker()
         {
-            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
+            const System.Net.SecurityProtocolType Tls13 = (System.Net.SecurityProtocolType)12288;
+            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | Tls13;
             string err = null;
             int updated = 0;
             try

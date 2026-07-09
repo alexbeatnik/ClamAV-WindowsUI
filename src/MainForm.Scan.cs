@@ -493,6 +493,7 @@ namespace ClamAVUI
                             return;
                         }
                         totalToScan = files.Count;
+                        initialFilesToScan = files.Count;
                         loggedTotal = true;
                         AppendLog(string.Format(Lang.T("log.filesToCheck"), files.Count) + "\r\n\r\n", Theme.Text, "SCAN", false);
                         StartDaemonScan(files);
@@ -820,10 +821,24 @@ namespace ClamAVUI
                     else statusLabel.Text = string.Format(Lang.T("status.scannedFound"), scannedCount, foundCount);
                 }
             }
+            else if (line.EndsWith(" ERROR"))
+            {
+                scannedCount++;
+                if (monitorScan) AppendLog(line + "\r\n", Theme.Muted, "ERROR", true);
+                else AppendLog(line + "\r\n", Theme.Danger, "ERROR", true);
+                if (scannedCount % 10 == 0 || scannedCount == totalToScan)
+                {
+                    if (totalToScan > 0) UpdateScanProgress();
+                    else statusLabel.Text = string.Format(Lang.T("status.scannedFound"), scannedCount, foundCount);
+                }
+            }
             else if (!monitorScan && line.Trim().Length > 0)
             {
                 // raw scanner chatter (access-denied warnings etc.) — details only
-                AppendLog(line + "\r\n", Theme.Muted, null, true);
+                if (line.IndexOf("warning", StringComparison.OrdinalIgnoreCase) >= 0)
+                    AppendLog(line + "\r\n", Theme.Warn, "WARN", true);
+                else
+                    AppendLog(line + "\r\n", Theme.Muted, null, true);
             }
         }
 
@@ -867,6 +882,7 @@ namespace ClamAVUI
             monitorScan = false;
             countGen++; // stop the background file counter
             totalToScan = 0;
+            initialFilesToScan = 0;
             StopClamd(); // the daemon lives only for the duration of the scan
             CleanupBatchLists();
             if (movedCount > 0) NeutralizeQuarantineFolder(); // safety net for --move drops
@@ -878,6 +894,11 @@ namespace ClamAVUI
                     scannedCount, FormatSpan(DateTime.Now - scanStart), foundCount),
                     foundCount > 0 ? Theme.Danger : Theme.Text,
                     foundCount > 0 ? "INFECTED" : "SCAN", false);
+                if (scannedCount < initialFilesToScan)
+                {
+                    int skipped = initialFilesToScan - scannedCount;
+                    AppendLog(string.Format(Lang.T("log.skippedExplanation"), skipped), Theme.Muted, null, false);
+                }
             }
             if (exitCode == 0 || exitCode == 1)
             {
