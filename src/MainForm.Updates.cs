@@ -324,11 +324,15 @@ namespace ClamAVUI
             cancelUpdate = false;
             if (!auto)
             {
-                log.Clear();
+                ClearLog();
+                AppendSection(Lang.T("btn.updateDb"));
                 AppendLog(Lang.T("log.updatingDbFirstTime"), Theme.Text);
             }
             else
+            {
+                AppendSection(Lang.T("btn.updateDb"));
                 AppendLog(string.Format(Lang.T("log.autoUpdating"), DateTime.Now), Theme.Muted);
+            }
             SetBusy(true, auto ? Lang.T("status.autoUpdatingDb") : Lang.T("status.updatingDb"));
             SetHero(ShieldState.Busy, Lang.T("hero.updatingDb"), Lang.T("hero.downloadingSignatures"));
 
@@ -421,17 +425,28 @@ namespace ClamAVUI
         // Database version from the 512-byte CVD header ("ClamAV-VDB:date:version:...")
         internal static long CvdVersionFromHeader(byte[] head, int len)
         {
+            return CvdFieldFromHeader(head, len, 2);
+        }
+
+        // The CVD header is colon-separated: "ClamAV-VDB:<build date>:<version>:<signatures>:…"
+        internal static long CvdFieldFromHeader(byte[] head, int len, int field)
+        {
             try
             {
                 string s = Encoding.ASCII.GetString(head, 0, Math.Min(len, 512));
                 string[] parts = s.Split(':');
-                if (parts.Length >= 3) { long v; if (long.TryParse(parts[2], out v)) return v; }
+                if (parts.Length > field) { long v; if (long.TryParse(parts[field], out v)) return v; }
             }
             catch { }
             return 0;
         }
 
         internal static long LocalCvdVersion(string path)
+        {
+            return LocalCvdField(path, 2);
+        }
+
+        internal static long LocalCvdField(string path, int field)
         {
             if (!File.Exists(path)) return 0;
             try
@@ -440,10 +455,39 @@ namespace ClamAVUI
                 {
                     var buf = new byte[512];
                     int n = fs.Read(buf, 0, 512);
-                    return CvdVersionFromHeader(buf, n);
+                    return CvdFieldFromHeader(buf, n, field);
                 }
             }
             catch { return 0; }
+        }
+
+        // Fills the dashboard database strip: one cell per database file (freshclam may
+        // have converted a .cvd to .cld — whichever is present wins) + total signatures.
+        void DbStripData(out string[] caps, out string[] vals)
+        {
+            string[] names = { "main", "daily", "bytecode" };
+            caps = new string[names.Length + 1];
+            vals = new string[names.Length + 1];
+            long sigs = 0;
+            for (int i = 0; i < names.Length; i++)
+            {
+                string file = names[i] + ".cvd";
+                long ver = 0;
+                if (dbDir != null)
+                {
+                    ver = LocalCvdVersion(Path.Combine(dbDir, file));
+                    if (ver == 0)
+                    {
+                        long cld = LocalCvdVersion(Path.Combine(dbDir, names[i] + ".cld"));
+                        if (cld > 0) { file = names[i] + ".cld"; ver = cld; }
+                    }
+                    if (ver > 0) sigs += LocalCvdField(Path.Combine(dbDir, file), 3);
+                }
+                caps[i] = file;
+                vals[i] = ver > 0 ? "v" + ver : "—";
+            }
+            caps[names.Length] = Lang.T("stat.signatures");
+            vals[names.Length] = sigs > 0 ? sigs.ToString("#,0") : "—";
         }
 
         static long RemoteCvdVersion(string url)

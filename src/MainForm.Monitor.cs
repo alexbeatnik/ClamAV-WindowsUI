@@ -22,6 +22,7 @@ namespace ClamAVUI
         void UpdateMonitorLabel()
         {
             chkMonitor.Text = string.Format(Lang.T("settings.monitorLabel"), watchDirs.Count);
+            RefreshSettingsStatus(); // folder count shows in the STATUS block too
         }
 
         void EditWatchDirs()
@@ -132,7 +133,7 @@ namespace ClamAVUI
                             MessageBox.Show(dlg, string.Format(Lang.T("msg.onlyExistingToQuarantine"), p), Lang.T("quarantine.title"));
                             continue;
                         }
-                        if (QuarantineFile(p)) exclusions.Remove(p);
+                        if (QuarantineFile(p, "", Lang.T("quarantine.reasonManual"))) exclusions.Remove(p);
                     }
                     SaveSettings();
                     UpdateStatsUi();
@@ -266,6 +267,7 @@ namespace ClamAVUI
             if (chkMonitor.Checked) StartWatchers();
             else StopWatchers();
             SaveSettings();
+            RefreshSettingsStatus();
             statusLabel.Text = chkMonitor.Checked
                 ? Lang.T("status.monitorOn")
                 : Lang.T("status.monitorOff");
@@ -366,7 +368,8 @@ namespace ClamAVUI
             monitorScan = true;
             countGen++; // the total is known upfront, no background counting needed
             totalToScan = files.Count;
-            AppendLog(string.Format(Lang.T("log.newFilesHeader"), DateTime.Now, files.Count), Theme.Text);
+            AppendSection(Lang.T("desc.autoCheck"));
+            AppendLog(string.Format(Lang.T("log.newFilesHeader"), DateTime.Now, files.Count), Theme.Text, "SCAN", false);
             SetBusy(true, string.Format(Lang.T("status.autoCheck"), files.Count));
 
             // Paths are passed via --file-list: hundreds of files on the command line

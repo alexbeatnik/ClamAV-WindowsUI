@@ -67,17 +67,51 @@ namespace ClamAVUI
             // Buttons
             A("btn.quickScan", "QUICK SCAN", "ШВИДКИЙ СКАН");
             A("btn.scanFileDash", "SCAN FILE", "СКАНУВАТИ ФАЙЛ");
+            A("btn.scanFileSub", "Choose a single file", "Перевірити один файл");
             A("btn.scanFolderDash", "SCAN FOLDER", "СКАНУВАТИ ПАПКУ");
+            A("btn.scanFolderSub", "Scan any directory", "Перевірити будь-яку папку");
             A("btn.scanAll", "FULL PC", "ВЕСЬ ПК");
+            A("btn.scanAllSub", "All local drives", "Усі локальні диски");
+            A("btn.quarantineSub", "Isolated threats", "Ізольовані загрози");
             A("btn.updateDb", "UPDATE DATABASE", "ОНОВИТИ БАЗИ");
             A("btn.openLog", "OPEN LOG FILE", "ВІДКРИТИ ФАЙЛ ЖУРНАЛУ");
             A("btn.openQuarantine", "OPEN QUARANTINE", "ВІДКРИТИ КАРАНТИН");
-            A("btn.exclusions", "EXCLUSIONS", "ВИКЛЮЧЕННЯ");
+            A("btn.exclusions", "MANAGE EXCLUSIONS…", "КЕРУВАТИ ВИКЛЮЧЕННЯМИ…");
             A("btn.quick", "QUICK", "ШВИДКИЙ");
             A("btn.file", "FILE", "ФАЙЛ");
             A("btn.folder", "FOLDER", "ПАПКА");
             A("btn.stop", "STOP", "ЗУПИНИТИ");
-            A("btn.folders", "FOLDERS…", "ПАПКИ…");
+            A("btn.clearLog", "CLEAR", "ОЧИСТИТИ");
+            A("btn.folders", "MANAGE…", "КЕРУВАТИ…");
+
+            // Logs page
+            A("log.showDetails", "Details", "Деталі");
+            A("section.scan", "Scan", "Сканування");
+            A("section.summary", "Summary", "Підсумок");
+
+            // Quarantine page
+            A("col.size", "Size", "Розмір");
+            A("col.source", "Source", "Джерело");
+            A("btn.restoreExclude", "Restore & exclude", "Відновити й виключити");
+            A("quarantine.searchCue", "Search quarantine…", "Пошук у карантині…");
+            A("quarantine.emptyTitle", "No files in quarantine", "У карантині порожньо");
+            A("quarantine.emptySub", "Detected threats will appear here.", "Виявлені загрози з'являтимуться тут.");
+            A("quarantine.reasonManual", "Manual", "Вручну");
+            A("stat.quarFiles", "Files", "Файлів");
+            A("stat.totalSize", "Total size", "Загальний розмір");
+            A("stat.lastDetection", "Last detection", "Останнє виявлення");
+            A("status.selected", "Selected: {0}", "Вибрано: {0}");
+            A("menu.openOrigin", "Open original folder", "Відкрити початкову папку");
+            A("menu.properties", "Properties", "Властивості");
+            A("prop.title", "File properties", "Властивості файлу");
+            A("prop.file", "File", "Файл");
+            A("prop.threat", "Threat", "Загроза");
+            A("prop.origin", "Original path", "Початковий шлях");
+            A("prop.source", "Source", "Джерело");
+            A("prop.when", "Quarantined", "У карантині з");
+            A("prop.size", "Size", "Розмір");
+            A("btn.copyHash", "COPY HASH", "КОПІЮВАТИ ХЕШ");
+            A("status.hashCopied", "SHA256 copied to clipboard.", "SHA256 скопійовано в буфер обміну.");
             A("btn.installedPF", "INSTALLED TO PROGRAM FILES", "ВСТАНОВЛЕНО В PROGRAM FILES");
             A("btn.installPF", "INSTALL TO PROGRAM FILES", "ВСТАНОВИТИ В PROGRAM FILES");
             A("btn.fixWinTemp", "FIX C:\\WINDOWS\\TEMP ACCESS", "ВІДНОВИТИ ДОСТУП ДО C:\\WINDOWS\\TEMP");
@@ -85,7 +119,8 @@ namespace ClamAVUI
             A("btn.toExclusions", "To exclusions", "У виключення");
             A("btn.delete", "Delete", "Видалити");
             A("btn.toQuarantine", "To quarantine", "В карантин");
-            A("btn.deleteForever", "Delete permanently", "Видалити назавжди");
+            A("btn.deleteForever", "Delete", "Видалити");
+            A("menu.deleteForever", "Delete permanently", "Видалити назавжди");
             A("btn.restore", "Restore", "Відновити");
             A("btn.openFolder", "Open folder", "Відкрити папку");
             A("btn.deleteFile", "Delete file", "Видалити файл");
@@ -102,6 +137,31 @@ namespace ClamAVUI
             A("settings.fullRisky", "Full scan: risky file types only (much faster)", "У повному скані перевіряти лише небезпечні типи (набагато швидше)");
             A("settings.autostart", "Start with Windows (in tray)", "Запускати разом з Windows (у треї)");
             A("settings.language", "Interface language:", "Мова інтерфейсу:");
+            A("settings.usbPrompt", "Offer to scan USB drives when connected", "Пропонувати перевірку USB-накопичувачів при підключенні");
+            A("settings.status", "Status", "Стан");
+            A("sstat.engine", "Engine", "Рушій");
+            A("sstat.database", "Database", "Бази");
+            A("sstat.monitoring", "Monitoring", "Моніторинг");
+            A("sstat.quarantine", "Quarantine", "Карантин");
+            A("sval.ready", "Ready", "Готовий");
+            A("sval.notFound", "Not found", "Не знайдено");
+            A("sval.enabled", "Enabled", "Увімкнено");
+            A("sval.disabled", "Disabled", "Вимкнено");
+            A("sval.filesN", "{0} files", "Файлів: {0}");
+            A("badge.installedPF", "Installed to Program Files", "Встановлено в Program Files");
+            A("settings.performance", "Scan performance:", "Продуктивність сканування:");
+            A("settings.perfHint", "Low — quieter PC, slower scans. High — fastest, loads the CPU.",
+                "Низька — тихіше для ПК, повільніше. Висока — найшвидше, навантажує процесор.");
+            A("perf.low", "Low", "Низька");
+            A("perf.normal", "Normal", "Звичайна");
+            A("perf.high", "High", "Висока");
+
+            // USB drive detection
+            A("usb.title", "New drive detected", "Виявлено новий накопичувач");
+            A("usb.scanPrompt", "New drive detected: {0}\r\n\r\nScan it for threats now?",
+                "Підключено новий накопичувач: {0}\r\n\r\nПеревірити його на загрози зараз?");
+            A("tray.usbBusy", "Drive {0} connected. A scan is already running — you can check it later from the dashboard.",
+                "Підключено диск {0}. Сканування вже триває — перевірити його можна пізніше з панелі.");
             A("msg.installConfirm", "The app will be copied to {0} together with ClamAV and the database,\r\nStart Menu/Desktop shortcuts will be created, and it will be registered in \"Apps\".\r\nAdministrator rights are required. Continue?",
                 "Програма скопіюється в {0} разом із ClamAV і базами,\r\nз'являться ярлики в Пуску, на робочому столі та запис у «Програмах».\r\nПотрібні права адміністратора. Продовжити?");
             A("msg.fixWinTempConfirm", "On this PC, C:\\Windows\\Temp is locked down so even reading its contents is denied "
@@ -165,7 +225,7 @@ namespace ClamAVUI
             A("log.buildingList", "Building file list…\r\n", "Складаю список файлів…\r\n");
             A("status.scanning", "Scanning…", "Сканування…");
             A("log.listCreateFailedInline", "Could not create the file list ({0}), passing files on the command line.\r\n", "Не вдалося створити список файлів ({0}), передаю в рядку.\r\n");
-            A("log.newFilesHeader", "\r\n[{0:HH:mm:ss}] New files ({1}) — auto-check:\r\n", "\r\n[{0:HH:mm:ss}] Нові файли ({1}) — автоперевірка:\r\n");
+            A("log.newFilesHeader", "New files ({1}) — auto-check:\r\n", "Нові файли ({1}) — автоперевірка:\r\n");
             A("status.autoCheck", "Auto-checking new files: {0}…", "Автоперевірка нових файлів: {0}…");
             A("log.filesToCheck", "Files to check: {0}", "Файлів для перевірки: {0}");
             A("desc.autoCheck", "auto-check of new files", "автоперевірка нових файлів");
@@ -179,11 +239,11 @@ namespace ClamAVUI
             A("time.s", "{0:0}s", "{0:0} с");
 
             // Heartbeat
-            A("log.hbListing", "[{0:HH:mm:ss}] Building file list… found {1}, elapsed {2}\r\n", "[{0:HH:mm:ss}] Складаю список файлів… знайдено {1}, минуло {2}\r\n");
-            A("log.hbEngineLoading", "[{0:HH:mm:ss}] Engine is loading the database into memory… elapsed {1}\r\n", "[{0:HH:mm:ss}] Рушій вантажить бази в пам'ять… минуло {1}\r\n");
-            A("log.hbRunning", "[{0:HH:mm:ss}] Running… scanned {1}, elapsed {2}\r\n", "[{0:HH:mm:ss}] Триває… проскановано {1}, минуло {2}\r\n");
-            A("log.hbBigFile", "[{0:HH:mm:ss}] Scanning a large file… scanned {1} of {2} ({3:0}%), elapsed {4}\r\n", "[{0:HH:mm:ss}] Сканую великий файл… проскановано {1} із {2} ({3:0}%), минуло {4}\r\n");
-            A("log.hbProgress", "[{0:HH:mm:ss}] Scanned {1} of {2} ({3:0}%), {4} files remaining{5}{6}\r\n", "[{0:HH:mm:ss}] Проскановано {1} із {2} ({3:0}%), залишилось {4} файлів{5}{6}\r\n");
+            A("log.hbListing", "Building file list… found {1}, elapsed {2}\r\n", "Складаю список файлів… знайдено {1}, минуло {2}\r\n");
+            A("log.hbEngineLoading", "Engine is loading the database into memory… elapsed {1}\r\n", "Рушій вантажить бази в пам'ять… минуло {1}\r\n");
+            A("log.hbRunning", "Running… scanned {1}, elapsed {2}\r\n", "Триває… проскановано {1}, минуло {2}\r\n");
+            A("log.hbBigFile", "Scanning a large file… scanned {1} of {2} ({3:0}%), elapsed {4}\r\n", "Сканую великий файл… проскановано {1} із {2} ({3:0}%), минуло {4}\r\n");
+            A("log.hbProgress", "Scanned {1} of {2} ({3:0}%), {4} files remaining{5}{6}\r\n", "Проскановано {1} із {2} ({3:0}%), залишилось {4} файлів{5}{6}\r\n");
             A("log.threatsSuffix", ", threats: {0}", ", загроз: {0}");
 
             // Log file / history
@@ -193,7 +253,7 @@ namespace ClamAVUI
             // Auto-update
             A("status.dbUpToDate", "Signature database is up to date.", "Бази сигнатур актуальні.");
             A("tray.dbUpdateDownloading", "A database update is available — downloading…", "Вийшло оновлення баз сигнатур — завантажую…");
-            A("log.dbNewerAutoDownload", "\r\n[{0:HH:mm}] A newer database is available — downloading automatically…\r\n", "\r\n[{0:HH:mm}] Доступні новіші бази — завантажую автоматично…\r\n");
+            A("log.dbNewerAutoDownload", "\r\nA newer database is available — downloading automatically…\r\n", "\r\nДоступні новіші бази — завантажую автоматично…\r\n");
             A("hero.dbUpdateAvailable", "A signature database update is available", "Доступне оновлення баз сигнатур");
             A("status.dbUpdateAvailablePress", "A database update is available — press \"Update Database\".", "Доступне оновлення баз — натисни «Оновити бази».");
             A("tray.dbUpdateAvailablePress", "A signature database update is available — press \"Update Database\".", "Доступне оновлення баз сигнатур — натисни «Оновити бази».");
@@ -294,7 +354,7 @@ namespace ClamAVUI
                 + "забагато запитів). Це мине саме собою, орієнтовно після {0}.\r\n"
                 + "Повторні спроби можуть подовжити блокування. Спробувати все одно?");
             A("log.updatingDbFirstTime", "Updating the signature database (first time is ~200 MB, please wait)…\r\n\r\n", "Оновлюю бази сигнатур (перший раз це ~200 МБ, зачекай)…\r\n\r\n");
-            A("log.autoUpdating", "\r\n[{0:HH:mm}] Auto-updating database…\r\n", "\r\n[{0:HH:mm}] Автооновлення баз…\r\n");
+            A("log.autoUpdating", "Auto-updating database…\r\n", "Автооновлення баз…\r\n");
             A("status.autoUpdatingDb", "Auto-updating database…", "Автооновлення баз…");
             A("status.updatingDb", "Updating database…", "Оновлення баз…");
             A("hero.updatingDb", "Updating database", "Оновлення баз");
@@ -342,6 +402,7 @@ namespace ClamAVUI
             A("stat.files", "Files scanned", "Файлів перевірено");
             A("stat.threats", "Threats", "Загроз");
             A("stat.quarantined", "Quarantined", "У карантині");
+            A("stat.signatures", "Signatures", "Сигнатур");
         }
     }
 }

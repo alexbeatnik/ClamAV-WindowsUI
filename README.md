@@ -65,9 +65,27 @@ anytime from Settings — no restart required.
   can't be launched accidentally and a resident AV (Windows Defender) won't
   detect and rip files out of the quarantine folder; restoring reverses the
   transform. The dashboard quarantine card shows a live counter of files
-  currently in quarantine
+  currently in quarantine. The quarantine page shows the **threat name**,
+  **size**, origin path, and detection date per file, with **search**
+  (by name, path, or threat), **sortable columns**, an info strip (count /
+  total size / last detection), a right-click **context menu**, and a
+  **Properties** dialog (double-click) with the **SHA256 of the original
+  content** — ready to paste into VirusTotal
 - **Exclusions**: a file can be removed from the exclusion list, deleted
   from disk, or sent **to quarantine**
+- **USB scan offer**: when a removable drive (flash stick, card reader) is
+  plugged in, the app asks "New drive detected — scan now?" — one click
+  starts a scan of the whole drive. Can be turned off in Settings
+- **Scan performance modes** (Settings → Low / Normal / High): Low runs a
+  single scanner process at reduced OS priority so the PC stays fully
+  responsive; High uses more clamd threads and parallel scan processes at
+  elevated priority for the fastest scan
+- **Readable log**: every line carries a timestamp and a colored severity tag
+  (`[INFO]`/`[SCAN]`/`[OK]`/`[WARN]`/`[INFECTED]`), scan phases are separated
+  by stage banners, a live text progress bar shows `scanned / total (%)`,
+  and a **Details** toggle hides path lists and raw scanner chatter for a
+  compact view. Auto-scroll follows the tail but stops yanking the view
+  when you scroll up to read
 - **Statistics**: number of scans, threats found, and files in quarantine
 - Autostart with Windows — **enabled automatically on first run**
   (`HKCU\...\Run` registry key, starts in the tray); the checkbox can be
@@ -155,6 +173,7 @@ src/                       — the application (WinForms, C# 5), compiled into o
   MainForm.Quarantine.cs   — quarantine storage, index, threat dialog
   MainForm.Monitor.cs      — folder monitoring, exclusions
   MainForm.Scan.cs         — scans, progress/ETA, clamd engine
+  MainForm.Usb.cs          — USB drive detection, scan-on-connect prompt
   MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
 tests/                     — unit tests + the zero-dependency test runner
 clamav.ico     — app icon (exe + window + tray), ClamAV logo

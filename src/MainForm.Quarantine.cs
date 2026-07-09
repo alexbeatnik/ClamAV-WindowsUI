@@ -19,6 +19,20 @@ namespace ClamAVUI
     {
         // ---------- Quarantine and statistics ----------
 
+        // One quarantined file as shown in the list; Tag of every ListViewItem
+        sealed class QuarRow
+        {
+            public string Path;     // full path of the .quar file on disk
+            public string Name;     // original file name (without .quar)
+            public string Threat;   // signature name ("" = unknown, pre-0.0.4 entry)
+            public string Origin;   // original full path ("" = unknown)
+            public string Reason;   // what put it here (scan description / "Manual")
+            public string WhenText; // index date string ("yyyy-MM-dd HH:mm")
+            public DateTime When;   // parsed date (MinValue if unparsable)
+            public long Size;       // bytes (equals the original size — XOR keeps length)
+        }
+        readonly List<QuarRow> quarRows = new List<QuarRow>();
+
         // Quarantined files are stored transformed (every byte XOR 0xFF) with a ".quar"
         // extension. The bytes on disk are no longer the malware body, so a resident AV
         // (e.g. Windows Defender) doesn't detect and "steal" files out of our quarantine,
@@ -124,6 +138,14 @@ namespace ClamAVUI
                 q > 0 ? Theme.Warn : Color.Empty
             };
             statStrip.Invalidate();
+            if (dbStrip != null)
+            {
+                string[] caps, vals;
+                DbStripData(out caps, out vals);
+                dbStrip.Captions = caps;
+                dbStrip.Values = vals;
+                dbStrip.Invalidate();
+            }
             if (btnQuarantine != null && btnQuarantine.Badge != q)
             {
                 btnQuarantine.Badge = q;
@@ -132,8 +154,9 @@ namespace ClamAVUI
         }
 
         // Moves a file into quarantine manually (without clamscan --move) in the
-        // neutralized .quar form, and writes the index
-        bool QuarantineFile(string path)
+        // neutralized .quar form, and writes the index.
+        // Index line format: file|origin|date|threat|source (older lines have 3 fields).
+        bool QuarantineFile(string path, string threat, string reason)
         {
             try
             {
@@ -142,7 +165,8 @@ namespace ClamAVUI
                 try { File.Delete(path); }
                 catch { TryDelete(dest); throw; } // source still there — don't leave two copies
                 File.AppendAllText(quarIndex,
-                    Path.GetFileName(dest) + "|" + path + "|" + DateTime.Now.ToString("yyyy-MM-dd HH:mm") + "\r\n",
+                    Path.GetFileName(dest) + "|" + path + "|" + DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+                    + "|" + (threat ?? "") + "|" + (reason ?? "") + "\r\n",
                     new UTF8Encoding(false));
                 totalMoved++;
                 return true;
@@ -152,6 +176,40 @@ namespace ClamAVUI
                 MessageBox.Show(this, string.Format(Lang.T("msg.quarantineMoveFailed"), ex.Message), Lang.T("quarantine.title"));
                 return false;
             }
+        }
+
+        // SHA256 of the ORIGINAL file content: .quar files are XOR-ed back on the fly,
+        // so the hash matches what the file was before quarantining (VirusTotal-ready)
+        internal static string Sha256OfQuarFile(string path)
+        {
+            bool xor = path.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase);
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            using (var fin = File.OpenRead(path))
+            {
+                var buf = new byte[81920];
+                int n;
+                while ((n = fin.Read(buf, 0, buf.Length)) > 0)
+                {
+                    if (xor) for (int i = 0; i < n; i++) buf[i] ^= 0xFF;
+                    sha.TransformBlock(buf, 0, n, null, 0);
+                }
+                sha.TransformFinalBlock(buf, 0, 0);
+                var sb = new StringBuilder(64);
+                foreach (byte b in sha.Hash) sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
+        }
+
+        // "2.3 MB", "145 KB" — human-readable size for the quarantine list
+        internal static string FormatSize(long bytes)
+        {
+            if (bytes < 1024) return bytes + " B";
+            double v = bytes / 1024.0;
+            string[] units = { "KB", "MB", "GB", "TB" };
+            int i = 0;
+            while (v >= 1024 && i < units.Length - 1) { v /= 1024; i++; }
+            return v.ToString(v >= 100 ? "0" : "0.0", System.Globalization.CultureInfo.InvariantCulture)
+                + " " + units[i];
         }
 
         void AddExclusion(string path)
@@ -181,7 +239,7 @@ namespace ClamAVUI
                 {
                     if (!File.Exists(f[0])) continue; // already moved or gone
                     var item = new ListViewItem(new string[] { f[0], f[1] });
-                    item.Tag = f[0];
+                    item.Tag = f; // {path, threat name}
                     list.Items.Add(item);
                 }
                 if (list.Items.Count == 0) return;
@@ -220,7 +278,10 @@ namespace ClamAVUI
                 quar.Click += delegate
                 {
                     foreach (var it in picked())
-                        if (QuarantineFile((string)it.Tag)) { movedCount++; list.Items.Remove(it); }
+                    {
+                        string[] meta = (string[])it.Tag;
+                        if (QuarantineFile(meta[0], meta[1], currentScanDesc)) { movedCount++; list.Items.Remove(it); }
+                    }
                     SaveSettings();
                     UpdateStatsUi();
                     maybeClose();
@@ -232,7 +293,7 @@ namespace ClamAVUI
                         Lang.T("title.deletion"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
                     foreach (var it in items)
                     {
-                        try { File.Delete((string)it.Tag); list.Items.Remove(it); }
+                        try { File.Delete(((string[])it.Tag)[0]); list.Items.Remove(it); }
                         catch (Exception ex) { MessageBox.Show(dlg, ex.Message, Lang.T("title.error")); }
                     }
                     maybeClose();
@@ -241,7 +302,7 @@ namespace ClamAVUI
                 {
                     foreach (var it in picked())
                     {
-                        AddExclusion((string)it.Tag);
+                        AddExclusion(((string[])it.Tag)[0]);
                         list.Items.Remove(it);
                     }
                     SaveSettings();
@@ -270,7 +331,15 @@ namespace ClamAVUI
             foreach (string line in File.ReadAllLines(indexPath))
             {
                 string[] parts = line.Split('|');
-                if (parts.Length >= 3) map[parts[0]] = parts;
+                if (parts.Length < 3) continue;
+                if (parts.Length < 5)
+                {
+                    // pre-0.0.4 entries lack threat/source — pad so callers can index freely
+                    var full = new string[5];
+                    for (int i = 0; i < 5; i++) full[i] = i < parts.Length ? parts[i] : "";
+                    parts = full;
+                }
+                map[parts[0]] = parts;
             }
             return map;
         }

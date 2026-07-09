@@ -45,8 +45,9 @@ namespace ClamAVUI
         {
             if (scanRunning || updateRunning) return;
             ResetScanState(target);
-            log.Clear();
-            AppendLog(string.Format(Lang.T("log.scanning"), target), Theme.Text);
+            ClearLog();
+            AppendSection(Lang.T("section.scan"));
+            AppendLog(string.Format(Lang.T("log.scanning"), target), Theme.Text, "SCAN", false);
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             SetBusy(true, Lang.T("status.scanning"));
             BeginListScan(new List<string> { target }, false);
@@ -64,6 +65,34 @@ namespace ClamAVUI
         {
             return " --max-filesize=50M --max-scansize=100M --max-recursion=6 --max-files=5000"
                  + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
+        }
+
+        // ---------- Scan performance (Settings → Low / Normal / High) ----------
+        // Low keeps the PC responsive during a scan (single scanner process at reduced
+        // OS priority); High trades CPU for speed (more clamd threads + parallel
+        // clamdscan processes at elevated priority). Normal is the pre-0.0.4 behavior.
+
+        internal static int PerfMaxThreads(int mode)
+        {
+            return mode == 0 ? 2 : mode == 2 ? 16 : 8; // clamd worker threads
+        }
+
+        // Upper bound on parallel clamdscan processes (capped by CPU count at the call site)
+        internal static int PerfMaxProcs(int mode)
+        {
+            return mode == 0 ? 1 : mode == 2 ? 8 : 4;
+        }
+
+        internal static ProcessPriorityClass PerfPriority(int mode)
+        {
+            return mode == 0 ? ProcessPriorityClass.BelowNormal
+                 : mode == 2 ? ProcessPriorityClass.AboveNormal
+                 : ProcessPriorityClass.Normal;
+        }
+
+        void ApplyScanPriority(Process p)
+        {
+            try { p.PriorityClass = PerfPriority(perfMode); } catch { } // process may have exited already
         }
 
         // ---------- Progress, log, auto-update ----------
@@ -101,12 +130,14 @@ namespace ClamAVUI
             }
             statusLabel.Text = string.Format(Lang.T("status.progress"),
                 scannedCount, totalToScan, f * 100, eta, foundCount);
+            scanProgressLabel.Text = ProgressBarText(f)
+                + string.Format("  {0} / {1}  ({2:0}%)", scannedCount, totalToScan, f * 100);
 
             if (monitorScan) return;
             if (!loggedTotal)
             {
                 loggedTotal = true;
-                AppendLog(string.Format(Lang.T("log.filesToCheck"), totalToScan) + "\r\n", Theme.Text);
+                AppendLog(string.Format(Lang.T("log.filesToCheck"), totalToScan) + "\r\n", Theme.Text, "SCAN", false);
             }
         }
         string lastEta = ""; // last time estimate ("~5m"), also shown by the heartbeat
@@ -119,28 +150,28 @@ namespace ClamAVUI
             string elapsed = FormatSpan(DateTime.Now - scanStart);
             if (listingFiles)
             {
-                AppendLog(string.Format(Lang.T("log.hbListing"), DateTime.Now, listedCount, elapsed), Theme.Muted);
+                AppendLog(string.Format(Lang.T("log.hbListing"), DateTime.Now, listedCount, elapsed), Theme.Muted, "SCAN", false);
                 return;
             }
             if (startingEngine)
             {
-                AppendLog(string.Format(Lang.T("log.hbEngineLoading"), DateTime.Now, elapsed), Theme.Muted);
+                AppendLog(string.Format(Lang.T("log.hbEngineLoading"), DateTime.Now, elapsed), Theme.Muted, "SCAN", false);
                 return;
             }
             bool stalled = (DateTime.Now - lastScanOutput).TotalSeconds >= 9; // no new output
             if (totalToScan <= 0)
             {
-                AppendLog(string.Format(Lang.T("log.hbRunning"), DateTime.Now, scannedCount, elapsed), Theme.Muted);
+                AppendLog(string.Format(Lang.T("log.hbRunning"), DateTime.Now, scannedCount, elapsed), Theme.Muted, "SCAN", false);
                 return;
             }
             double f = Math.Min(1.0, (double)scannedCount / totalToScan);
             int left = Math.Max(0, totalToScan - scannedCount);
             if (stalled)
-                AppendLog(string.Format(Lang.T("log.hbBigFile"), DateTime.Now, scannedCount, totalToScan, f * 100, elapsed), Theme.Muted);
+                AppendLog(string.Format(Lang.T("log.hbBigFile"), DateTime.Now, scannedCount, totalToScan, f * 100, elapsed), Theme.Muted, "SCAN", false);
             else
                 AppendLog(string.Format(Lang.T("log.hbProgress"), DateTime.Now, scannedCount, totalToScan, f * 100, left,
                     lastEta.Length > 0 ? " (" + lastEta + ")" : "",
-                    foundCount > 0 ? string.Format(Lang.T("log.threatsSuffix"), foundCount) : ""), Theme.Muted);
+                    foundCount > 0 ? string.Format(Lang.T("log.threatsSuffix"), foundCount) : ""), Theme.Muted, "SCAN", false);
         }
 
         void AppendScanLog()
@@ -280,8 +311,9 @@ namespace ClamAVUI
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             ResetScanState(string.Format(Lang.T("desc.fullScan"), drives));
-            log.Clear();
-            AppendLog(string.Format(risky ? Lang.T("log.fullScanRisky") : Lang.T("log.fullScanAll"), drives), Theme.Text);
+            ClearLog();
+            AppendSection(Lang.T("title.fullScan"));
+            AppendLog(string.Format(risky ? Lang.T("log.fullScanRisky") : Lang.T("log.fullScanAll"), drives), Theme.Text, "SCAN", false);
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             SetBusy(true, Lang.T("status.fullScanRunning"));
             BeginListScan(targets, risky);
@@ -310,11 +342,12 @@ namespace ClamAVUI
         {
             if (scanRunning || updateRunning || clamDir == null || !DbExists()) return;
             ResetScanState(Lang.T("desc.quickScan"));
-            log.Clear();
+            ClearLog();
             var roots = QuickScanRoots();
-            AppendLog(Lang.T("log.quickScanHeader"), Theme.Text);
-            foreach (string r in roots) AppendLog("  " + r + "\r\n", Theme.Muted);
-            AppendLog(Lang.T("log.quickScanProcesses"), Theme.Muted);
+            AppendSection(Lang.T("btn.quickScan"));
+            AppendLog(Lang.T("log.quickScanHeader"), Theme.Text, "SCAN", false);
+            foreach (string r in roots) AppendLog("  " + r + "\r\n", Theme.Muted, null, true);
+            AppendLog(Lang.T("log.quickScanProcesses"), Theme.Muted, null, true);
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             roots.AddRange(RunningProcessFiles());
             SetBusy(true, Lang.T("status.quickScanRunning"));
@@ -461,7 +494,7 @@ namespace ClamAVUI
                         }
                         totalToScan = files.Count;
                         loggedTotal = true;
-                        AppendLog(string.Format(Lang.T("log.filesToCheck"), files.Count) + "\r\n\r\n", Theme.Text);
+                        AppendLog(string.Format(Lang.T("log.filesToCheck"), files.Count) + "\r\n\r\n", Theme.Text, "SCAN", false);
                         StartDaemonScan(files);
                     });
                 }
@@ -487,7 +520,7 @@ namespace ClamAVUI
             File.WriteAllText(Path.Combine(clamDir, "clamd.conf"),
                 "TCPSocket " + ClamdPort + "\r\n" +
                 "TCPAddr 127.0.0.1\r\n" +
-                "MaxThreads 8\r\n" +
+                "MaxThreads " + PerfMaxThreads(perfMode) + "\r\n" +
                 "DatabaseDirectory \"" + dbDir + "\"\r\n" +
                 // same limits as ScanLimitsArg uses for clamscan
                 "MaxScanSize 100M\r\nMaxFileSize 50M\r\nMaxRecursion 6\r\n" +
@@ -550,6 +583,7 @@ namespace ClamAVUI
                         psi.RedirectStandardError = true;
                         psi.WorkingDirectory = clamDir;
                         var p = Process.Start(psi);
+                        ApplyScanPriority(p); // clamd does the actual scanning work
                         string lastLine = "";
                         p.OutputDataReceived += delegate(object s, DataReceivedEventArgs e)
                             { if (!string.IsNullOrEmpty(e.Data)) lastLine = e.Data; };
@@ -646,8 +680,9 @@ namespace ClamAVUI
                 return;
             }
 
-            // as many list chunks as parallel clamdscan processes
-            int n = files.Count >= 200 ? Math.Max(2, Math.Min(4, Environment.ProcessorCount)) : 1;
+            // as many list chunks as parallel clamdscan processes (perf mode sets the cap)
+            int maxProcs = Math.Min(PerfMaxProcs(perfMode), Environment.ProcessorCount);
+            int n = files.Count >= 200 && maxProcs >= 2 ? Math.Max(2, maxProcs) : 1;
             var chunks = new List<string>();
             if (n > 1)
             {
@@ -729,6 +764,7 @@ namespace ClamAVUI
             try
             {
                 p.Start();
+                ApplyScanPriority(p);
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
                 scanProcs.Add(p);
@@ -756,7 +792,7 @@ namespace ClamAVUI
             if (line.Contains(": moved to '"))
             {
                 RecordQuarantineMove(line);
-                AppendLog(line + "\r\n", Theme.Warn);
+                AppendLog(line + "\r\n", Theme.Warn, "INFECTED", false);
                 return;
             }
             if (line.EndsWith(" FOUND"))
@@ -770,14 +806,14 @@ namespace ClamAVUI
                     string sig = line.Substring(sep + 2, line.Length - sep - 2 - 6); // strip " FOUND"
                     foundFiles.Add(new string[] { path, sig });
                 }
-                AppendLog(line + "\r\n", Theme.Danger);
+                AppendLog(line + "\r\n", Theme.Danger, "INFECTED", false);
                 if (totalToScan > 0) UpdateScanProgress();
                 else statusLabel.Text = string.Format(Lang.T("status.scannedFound"), scannedCount, foundCount);
             }
             else if (line.EndsWith(": OK"))
             {
                 scannedCount++;
-                if (monitorScan) AppendLog(line + "\r\n", Theme.Muted);
+                if (monitorScan) AppendLog(line + "\r\n", Theme.Muted, "OK", true);
                 if (scannedCount % 10 == 0 || scannedCount == totalToScan)
                 {
                     if (totalToScan > 0) UpdateScanProgress();
@@ -786,7 +822,8 @@ namespace ClamAVUI
             }
             else if (!monitorScan && line.Trim().Length > 0)
             {
-                AppendLog(line + "\r\n", Theme.Muted);
+                // raw scanner chatter (access-denied warnings etc.) — details only
+                AppendLog(line + "\r\n", Theme.Muted, null, true);
             }
         }
 
@@ -809,10 +846,15 @@ namespace ClamAVUI
                 finalName = Path.GetFileName(dest);
             }
             catch { }
+            // the FOUND line for this file arrived just before the move — take its signature
+            string threat = "";
+            foreach (string[] ff in foundFiles)
+                if (string.Equals(ff[0], original, StringComparison.OrdinalIgnoreCase)) { threat = ff[1]; break; }
             try
             {
                 File.AppendAllText(quarIndex,
-                    finalName + "|" + original + "|" + DateTime.Now.ToString("yyyy-MM-dd HH:mm") + "\r\n",
+                    finalName + "|" + original + "|" + DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+                    + "|" + threat + "|" + currentScanDesc + "\r\n",
                     new UTF8Encoding(false));
             }
             catch { }
@@ -830,9 +872,13 @@ namespace ClamAVUI
             if (movedCount > 0) NeutralizeQuarantineFolder(); // safety net for --move drops
             SetBusy(false, null);
             if (!wasMonitor && (exitCode == 0 || exitCode == 1))
+            {
+                AppendSection(Lang.T("section.summary"));
                 AppendLog(string.Format(Lang.T("log.summary"),
                     scannedCount, FormatSpan(DateTime.Now - scanStart), foundCount),
-                    foundCount > 0 ? Theme.Danger : Theme.Text);
+                    foundCount > 0 ? Theme.Danger : Theme.Text,
+                    foundCount > 0 ? "INFECTED" : "SCAN", false);
+            }
             if (exitCode == 0 || exitCode == 1)
             {
                 totalScans++;
@@ -868,7 +914,7 @@ namespace ClamAVUI
                     scannedCount, foundCount, movedInfo);
                 SetHero(ShieldState.Danger, Lang.T("hero.threatsFoundTitle"),
                     string.Format(Lang.T("hero.threatsFoundSub"), foundCount, movedInfo));
-                AppendLog(string.Format(Lang.T("log.threatsFound"), foundCount, movedInfo), Theme.Danger);
+                AppendLog(string.Format(Lang.T("log.threatsFound"), foundCount, movedInfo), Theme.Danger, "INFECTED", false);
                 tray.ShowBalloonTip(8000, AppName,
                     string.Format(Lang.T("tray.threatsFoundWarn"), foundCount, movedInfo), ToolTipIcon.Warning);
                 RestoreFromTray();
