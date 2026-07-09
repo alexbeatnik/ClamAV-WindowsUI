@@ -22,6 +22,10 @@ namespace ClamAVUI
         public static extern int RegisterWindowMessage(string message);
         [DllImport("user32.dll")]
         public static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        // EM_SETCUEBANNER: gray placeholder text inside an empty TextBox
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
+        public const int EM_SETCUEBANNER = 0x1501;
     }
 
     // Dark theme palette — deep navy-tinted surfaces + vivid accents, the look

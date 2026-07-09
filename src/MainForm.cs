@@ -18,7 +18,7 @@ namespace ClamAVUI
     public partial class MainForm : Form
     {
         const string AppName = "ClamAV UI";
-        const string AppVersion = "0.0.3";
+        const string AppVersion = "0.0.4";
         const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         const string RunValueName = "ClamAVUI";
 
@@ -91,6 +91,13 @@ namespace ClamAVUI
         Label perfLabel, perfHint;
         ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
         ListView quarList;
+        StatStrip quarStrip;          // files / total size / last detection above the list
+        TextBox quarSearch;           // filters by name, origin path, and threat name
+        EmptyState quarEmpty;         // shown instead of an empty list
+        ContextMenuStrip quarMenu;
+        ToolStripMenuItem quarMenuRestore, quarMenuRestoreExcl, quarMenuDelete, quarMenuOpen, quarMenuProps;
+        int quarSortCol = 4;          // default sort: newest first
+        bool quarSortAsc = false;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
         RichTextBox log;
         Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, scanProgressLabel;

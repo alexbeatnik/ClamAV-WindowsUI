@@ -409,14 +409,78 @@ namespace ClamAVUI
             page.BackColor = Theme.Bg;
             page.Padding = new Padding(6);
 
+            // Info strip above the list: file count / total size / last detection,
+            // with a search box on the right (filters by name, path, and threat)
+            quarStrip = new StatStrip();
+            quarStrip.Dock = DockStyle.Top;
+            quarStrip.Height = 66;
+            quarStrip.Padding = new Padding(0, 10, 12, 14);
+            var searchWrap = new Panel();
+            searchWrap.Dock = DockStyle.Right;
+            searchWrap.Width = 250;
+            searchWrap.Padding = new Padding(0, 19, 16, 19);
+            searchWrap.BackColor = Theme.Card;
+            quarSearch = new TextBox();
+            quarSearch.Dock = DockStyle.Fill;
+            quarSearch.BorderStyle = BorderStyle.FixedSingle;
+            quarSearch.BackColor = Theme.LogBg;
+            quarSearch.ForeColor = Theme.Text;
+            quarSearch.Font = new Font("Segoe UI", 10f);
+            quarSearch.TextChanged += delegate { ApplyQuarFilter(); };
+            quarSearch.HandleCreated += delegate { SetQuarSearchCue(); };
+            searchWrap.Controls.Add(quarSearch);
+            quarStrip.Controls.Add(searchWrap);
+
             cardQuar = new CardPanel(Lang.T("card.quarantine"));
             cardQuar.Dock = DockStyle.Fill;
             cardQuar.Margin = new Padding(6);
 
             quarList = MakeList();
-            quarList.Columns.Add(Lang.T("col.file"), 220);
-            quarList.Columns.Add(Lang.T("col.origin"), 280);
-            quarList.Columns.Add(Lang.T("col.when"), 130);
+            quarList.HeaderStyle = ColumnHeaderStyle.Clickable; // click a header to sort
+            quarList.Columns.Add(Lang.T("col.file"), 180);
+            quarList.Columns.Add(Lang.T("col.threat"), 170);
+            quarList.Columns.Add(Lang.T("col.origin"), 230);
+            quarList.Columns.Add(Lang.T("col.size"), 80);
+            quarList.Columns.Add(Lang.T("col.when"), 125);
+            quarList.ColumnClick += OnQuarColumnClick;
+            quarList.Resize += delegate { StretchQuarColumns(); };
+            quarList.DoubleClick += delegate { ShowQuarProperties(); };
+            quarList.SelectedIndexChanged += delegate
+            {
+                if (quarList.SelectedItems.Count > 0)
+                    statusLabel.Text = string.Format(Lang.T("status.selected"), quarList.SelectedItems.Count);
+            };
+
+            quarEmpty = new EmptyState();
+            quarEmpty.Dock = DockStyle.Fill;
+            quarEmpty.Title = Lang.T("quarantine.emptyTitle");
+            quarEmpty.Sub = Lang.T("quarantine.emptySub");
+            quarEmpty.Visible = false;
+
+            // Right-click menu mirrors the buttons and adds Properties
+            quarMenu = new ContextMenuStrip();
+            quarMenu.Renderer = new ToolStripProfessionalRenderer(new DarkMenuColors());
+            quarMenu.ForeColor = Theme.Text;
+            quarMenuRestore = new ToolStripMenuItem();
+            quarMenuRestore.Click += delegate { RestoreSelectedQuarantine(false); };
+            quarMenuRestoreExcl = new ToolStripMenuItem();
+            quarMenuRestoreExcl.Click += delegate { RestoreSelectedQuarantine(true); };
+            quarMenuDelete = new ToolStripMenuItem();
+            quarMenuDelete.Click += delegate { DeleteSelectedQuarantine(); };
+            quarMenuOpen = new ToolStripMenuItem();
+            quarMenuOpen.Click += delegate { OpenQuarOriginFolder(); };
+            quarMenuProps = new ToolStripMenuItem();
+            quarMenuProps.Click += delegate { ShowQuarProperties(); };
+            quarMenu.Items.AddRange(new ToolStripItem[]
+            {
+                quarMenuRestore, quarMenuRestoreExcl, new ToolStripSeparator(),
+                quarMenuOpen, quarMenuProps, new ToolStripSeparator(), quarMenuDelete
+            });
+            quarMenu.Opening += delegate(object s, System.ComponentModel.CancelEventArgs e)
+            {
+                if (quarList.SelectedItems.Count == 0) e.Cancel = true;
+            };
+            quarList.ContextMenuStrip = quarMenu;
 
             var buttons = new FlowLayoutPanel();
             buttons.Dock = DockStyle.Bottom;
@@ -425,25 +489,213 @@ namespace ClamAVUI
             buttons.Padding = new Padding(8);
             buttons.BackColor = Theme.Card;
 
-            btnQuarDelete = MakeButton(Lang.T("btn.deleteForever"), 170, Theme.Danger, Theme.DangerHot, Ico.Trash);
-            btnQuarRestore = MakeButton(Lang.T("btn.restore"), 120, Theme.Accent, Theme.AccentHot, Ico.Restore);
-            btnQuarToExcl = MakeButton(Lang.T("btn.toExclusions"), 125, Theme.Card, Theme.Bg, Ico.Ban);
-            btnQuarOpenFolder = MakeButton(Lang.T("btn.openFolder"), 140, Theme.Card, Theme.Bg, Ico.FolderIcon);
-            btnQuarExclusions = MakeButton(Lang.T("btn.exclusions"), 125, Theme.Card, Theme.Bg, Ico.Ban);
+            btnQuarRestore = MakeButton(Lang.T("btn.restore"), 130, Theme.Accent, Theme.AccentHot, Ico.Restore);
+            btnQuarToExcl = MakeButton(Lang.T("btn.restoreExclude"), 225, Theme.Card, Theme.Bg, Ico.Ban);
+            btnQuarDelete = MakeButton(Lang.T("btn.deleteForever"), 120, Theme.Danger, Theme.DangerHot, Ico.Trash);
+            btnQuarOpenFolder = MakeButton(Lang.T("btn.openFolder"), 150, Theme.Card, Theme.Bg, Ico.FolderIcon);
 
             btnQuarRestore.Click += delegate { RestoreSelectedQuarantine(false); };
             btnQuarToExcl.Click += delegate { RestoreSelectedQuarantine(true); };
             btnQuarDelete.Click += delegate { DeleteSelectedQuarantine(); };
             btnQuarOpenFolder.Click += delegate { Process.Start("explorer.exe", "\"" + quarDir + "\""); };
-            btnQuarExclusions.Click += delegate { EditExclusions(); };
 
-            buttons.Controls.AddRange(new Control[] { btnQuarRestore, btnQuarToExcl, btnQuarDelete, btnQuarOpenFolder, btnQuarExclusions });
+            buttons.Controls.AddRange(new Control[] { btnQuarRestore, btnQuarToExcl, btnQuarDelete, btnQuarOpenFolder });
 
             cardQuar.Controls.Add(quarList);
+            cardQuar.Controls.Add(quarEmpty);
             cardQuar.Controls.Add(buttons);
 
             page.Controls.Add(cardQuar);
+            page.Controls.Add(quarStrip);
             return page;
+        }
+
+        void SetQuarSearchCue()
+        {
+            try
+            {
+                NativeMethods.SendMessage(quarSearch.Handle, NativeMethods.EM_SETCUEBANNER,
+                    (IntPtr)1, Lang.T("quarantine.searchCue"));
+            }
+            catch { }
+        }
+
+        void OnQuarColumnClick(object sender, ColumnClickEventArgs e)
+        {
+            if (quarSortCol == e.Column) quarSortAsc = !quarSortAsc;
+            else { quarSortCol = e.Column; quarSortAsc = e.Column < 3; } // size/date: biggest/newest first
+            ApplyQuarFilter();
+        }
+
+        void UpdateQuarHeaders()
+        {
+            string[] keys = { "col.file", "col.threat", "col.origin", "col.size", "col.when" };
+            for (int i = 0; i < quarList.Columns.Count; i++)
+                quarList.Columns[i].Text = Lang.T(keys[i])
+                    + (i == quarSortCol ? (quarSortAsc ? "  ▲" : "  ▼") : "");
+            StretchQuarColumns();
+        }
+
+        // Widens the Origin column so the columns fill the list and no unpainted
+        // (white) header slab shows to the right of the last column
+        void StretchQuarColumns()
+        {
+            if (quarList == null || quarList.Columns.Count < 5) return;
+            int other = quarList.Columns[0].Width + quarList.Columns[1].Width
+                + quarList.Columns[3].Width + quarList.Columns[4].Width;
+            int w = quarList.ClientSize.Width - other - 4;
+            if (w > 120) quarList.Columns[2].Width = w;
+        }
+
+        int CompareQuarRows(QuarRow a, QuarRow b)
+        {
+            int c;
+            switch (quarSortCol)
+            {
+                case 0: c = string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase); break;
+                case 1: c = string.Compare(a.Threat, b.Threat, StringComparison.OrdinalIgnoreCase); break;
+                case 2: c = string.Compare(a.Origin, b.Origin, StringComparison.OrdinalIgnoreCase); break;
+                case 3: c = a.Size.CompareTo(b.Size); break;
+                default: c = a.When.CompareTo(b.When); break;
+            }
+            return quarSortAsc ? c : -c;
+        }
+
+        // Fills the ListView from quarRows honoring the search text and sort order
+        void ApplyQuarFilter()
+        {
+            if (quarList == null) return;
+            string q = quarSearch != null ? quarSearch.Text.Trim() : "";
+            var rows = new List<QuarRow>();
+            foreach (QuarRow r in quarRows)
+            {
+                if (q.Length > 0
+                    && r.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
+                    && r.Origin.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
+                    && r.Threat.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                rows.Add(r);
+            }
+            rows.Sort(CompareQuarRows);
+            quarList.BeginUpdate();
+            quarList.Items.Clear();
+            foreach (QuarRow r in rows)
+            {
+                var item = new ListViewItem(new string[]
+                {
+                    r.Name,
+                    r.Threat.Length > 0 ? r.Threat : "—",
+                    r.Origin.Length > 0 ? r.Origin : Lang.T("quarantine.unknownOrigin"),
+                    FormatSize(r.Size),
+                    r.WhenText
+                });
+                item.Tag = r;
+                if (r.Threat.Length > 0)
+                {
+                    item.UseItemStyleForSubItems = false;
+                    item.SubItems[1].ForeColor = Theme.Danger;
+                }
+                quarList.Items.Add(item);
+            }
+            quarList.EndUpdate();
+            bool empty = quarRows.Count == 0;
+            quarEmpty.Visible = empty;
+            quarList.Visible = !empty;
+            UpdateQuarHeaders();
+        }
+
+        void OpenQuarOriginFolder()
+        {
+            if (quarList.SelectedItems.Count == 0) return;
+            var row = (QuarRow)quarList.SelectedItems[0].Tag;
+            string dir = null;
+            try { if (row.Origin.Length > 0) dir = Path.GetDirectoryName(row.Origin); } catch { }
+            if (dir != null && Directory.Exists(dir)) Process.Start("explorer.exe", "\"" + dir + "\"");
+            else statusLabel.Text = Lang.T("quarantine.unknownOrigin");
+        }
+
+        // Properties dialog: origin, threat, source, date, size, SHA256 (+ copy)
+        void ShowQuarProperties()
+        {
+            if (quarList.SelectedItems.Count == 0) return;
+            var row = (QuarRow)quarList.SelectedItems[0].Tag;
+            string hash;
+            try
+            {
+                Cursor = Cursors.WaitCursor;
+                hash = Sha256OfQuarFile(row.Path);
+            }
+            catch (Exception ex) { hash = ex.Message; }
+            finally { Cursor = Cursors.Default; }
+
+            using (var dlg = new Form())
+            {
+                dlg.Text = Lang.T("prop.title");
+                dlg.Size = new Size(680, 350);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MinimizeBox = dlg.MaximizeBox = false;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.BackColor = Theme.Bg;
+                dlg.ForeColor = Theme.Text;
+                dlg.Font = Font;
+                Theme.DarkTitleBar(dlg);
+
+                var grid = new TableLayoutPanel();
+                grid.Dock = DockStyle.Fill;
+                grid.Padding = new Padding(16, 12, 16, 0);
+                grid.ColumnCount = 2;
+                grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+                grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+                Action<string, string, Color> addRow = delegate(string caption, string value, Color valueColor)
+                {
+                    var cap = new Label();
+                    cap.Text = caption;
+                    cap.ForeColor = Theme.Muted;
+                    cap.AutoSize = true;
+                    cap.Margin = new Padding(0, 6, 8, 6);
+                    // read-only borderless TextBox so long values can be selected and copied
+                    var val = new TextBox();
+                    val.Text = value;
+                    val.ReadOnly = true;
+                    val.BorderStyle = BorderStyle.None;
+                    val.BackColor = Theme.Bg;
+                    val.ForeColor = valueColor;
+                    val.Dock = DockStyle.Fill;
+                    val.Margin = new Padding(0, 6, 0, 6);
+                    grid.Controls.Add(cap);
+                    grid.Controls.Add(val);
+                };
+                addRow(Lang.T("prop.file"), row.Name, Theme.Text);
+                addRow(Lang.T("prop.threat"), row.Threat.Length > 0 ? row.Threat : "—",
+                    row.Threat.Length > 0 ? Theme.Danger : Theme.Text);
+                addRow(Lang.T("prop.origin"), row.Origin.Length > 0 ? row.Origin : Lang.T("quarantine.unknownOrigin"), Theme.Text);
+                addRow(Lang.T("prop.source"), row.Reason.Length > 0 ? row.Reason : "—", Theme.Text);
+                addRow(Lang.T("prop.when"), row.WhenText.Length > 0 ? row.WhenText : "—", Theme.Text);
+                addRow(Lang.T("prop.size"), FormatSize(row.Size), Theme.Text);
+                addRow("SHA256", hash, Theme.Text);
+
+                var buttons = new FlowLayoutPanel();
+                buttons.Dock = DockStyle.Bottom;
+                buttons.FlowDirection = FlowDirection.RightToLeft;
+                buttons.Height = 52;
+                buttons.Padding = new Padding(10);
+                buttons.BackColor = Theme.Bg;
+                var close = MakeButton(Lang.T("btn.close"), 100, Theme.Card, Theme.Bg, Ico.Close);
+                close.DialogResult = DialogResult.Cancel;
+                var copy = MakeButton(Lang.T("btn.copyHash"), 170, Theme.Accent, Theme.AccentHot);
+                copy.Click += delegate
+                {
+                    try { Clipboard.SetText(hash); statusLabel.Text = Lang.T("status.hashCopied"); }
+                    catch { }
+                };
+                buttons.Controls.Add(close);
+                buttons.Controls.Add(copy);
+
+                dlg.Controls.Add(grid);
+                dlg.Controls.Add(buttons);
+                dlg.CancelButton = close;
+                dlg.ShowDialog(this);
+            }
         }
 
         void ReloadQuarantineList()
@@ -452,22 +704,52 @@ namespace ClamAVUI
             try { if (!Directory.Exists(quarDir)) Directory.CreateDirectory(quarDir); }
             catch { return; }
             NeutralizeQuarantineFolder(); // pick up legacy/raw files before listing
-            quarList.Items.Clear();
+            quarRows.Clear();
             var map = ReadQuarIndex(quarIndex);
+            long totalSize = 0;
+            DateTime lastDet = DateTime.MinValue;
             foreach (string f in Directory.GetFiles(quarDir))
             {
                 string name = Path.GetFileName(f);
                 if (string.Equals(name, "index.txt", StringComparison.OrdinalIgnoreCase)) continue;
-                string origin = Lang.T("quarantine.unknownOrigin"), when = "";
-                string[] meta;
-                if (map.TryGetValue(name, out meta)) { origin = meta[1]; when = meta[2]; }
+                var row = new QuarRow();
+                row.Path = f;
                 // the list shows the original file name; the .quar suffix is an on-disk detail
-                string display = name.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase)
+                row.Name = name.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase)
                     ? name.Substring(0, name.Length - QuarExt.Length) : name;
-                var item = new ListViewItem(new string[] { display, origin, when });
-                item.Tag = f;
-                quarList.Items.Add(item);
+                row.Threat = row.Origin = row.Reason = row.WhenText = "";
+                string[] meta;
+                if (map.TryGetValue(name, out meta))
+                {
+                    row.Origin = meta[1];
+                    row.WhenText = meta[2];
+                    row.Threat = meta[3];
+                    row.Reason = meta[4];
+                }
+                DateTime when;
+                if (DateTime.TryParseExact(row.WhenText, "yyyy-MM-dd HH:mm", null,
+                    System.Globalization.DateTimeStyles.None, out when)) row.When = when;
+                try { row.Size = new FileInfo(f).Length; } catch { }
+                totalSize += row.Size;
+                if (row.When > lastDet) lastDet = row.When;
+                quarRows.Add(row);
             }
+            quarStrip.Captions = new string[]
+            {
+                Lang.T("stat.quarFiles"), Lang.T("stat.totalSize"), Lang.T("stat.lastDetection")
+            };
+            quarStrip.Values = new string[]
+            {
+                quarRows.Count.ToString(),
+                quarRows.Count > 0 ? FormatSize(totalSize) : "—",
+                lastDet > DateTime.MinValue ? lastDet.ToString("dd.MM.yyyy HH:mm") : "—"
+            };
+            quarStrip.ValueColors = new Color[]
+            {
+                quarRows.Count > 0 ? Theme.Warn : Color.Empty, Color.Empty, Color.Empty
+            };
+            quarStrip.Invalidate();
+            ApplyQuarFilter();
             UpdateStatsUi();
         }
 
@@ -479,30 +761,29 @@ namespace ClamAVUI
                 Lang.T("quarantine.title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             foreach (ListViewItem it in quarList.SelectedItems)
             {
-                string path = (string)it.Tag;
-                string origin = it.SubItems[1].Text;
-                if (origin == Lang.T("quarantine.unknownOrigin"))
+                var row = (QuarRow)it.Tag;
+                if (row.Origin.Length == 0)
                 {
-                    MessageBox.Show(this, string.Format(Lang.T("msg.unknownOriginPath"), it.Text), Lang.T("quarantine.title"));
+                    MessageBox.Show(this, string.Format(Lang.T("msg.unknownOriginPath"), row.Name), Lang.T("quarantine.title"));
                     continue;
                 }
                 try
                 {
-                    if (File.Exists(origin))
+                    if (File.Exists(row.Origin))
                     {
-                        MessageBox.Show(this, string.Format(Lang.T("msg.fileExists"), origin), Lang.T("quarantine.title"));
+                        MessageBox.Show(this, string.Format(Lang.T("msg.fileExists"), row.Origin), Lang.T("quarantine.title"));
                         continue;
                     }
-                    if (path.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase))
+                    if (row.Path.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase))
                     {
                         // neutralized file: XOR back into the original bytes at the origin path
-                        XorCopy(path, origin);
-                        File.Delete(path);
+                        XorCopy(row.Path, row.Origin);
+                        File.Delete(row.Path);
                     }
                     else
-                        File.Move(path, origin); // raw legacy file — plain move
-                    RemoveQuarIndexEntry(quarIndex, Path.GetFileName(path));
-                    if (excludeToo) AddExclusion(origin);
+                        File.Move(row.Path, row.Origin); // raw legacy file — plain move
+                    RemoveQuarIndexEntry(quarIndex, Path.GetFileName(row.Path));
+                    if (excludeToo) AddExclusion(row.Origin);
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, Lang.T("title.error")); }
             }
@@ -518,8 +799,8 @@ namespace ClamAVUI
                 Lang.T("quarantine.title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             foreach (ListViewItem it in quarList.SelectedItems)
             {
-                string path = (string)it.Tag;
-                try { File.Delete(path); RemoveQuarIndexEntry(quarIndex, Path.GetFileName(path)); }
+                var row = (QuarRow)it.Tag;
+                try { File.Delete(row.Path); RemoveQuarIndexEntry(quarIndex, Path.GetFileName(row.Path)); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, Lang.T("title.error")); }
             }
             ReloadQuarantineList();
@@ -614,6 +895,13 @@ namespace ClamAVUI
             perfHint.Location = new Point(520, 160);
             UpdatePerfButtons();
 
+            // exclusion-list editor lives here now — on the quarantine page it looked
+            // like one more action applied to the selected file
+            btnQuarExclusions = MakeLightButton(Lang.T("btn.exclusions"), Ico.Ban);
+            btnQuarExclusions.BackColor = Theme.Card;
+            btnQuarExclusions.SetBounds(520, 216, 200, 30);
+            btnQuarExclusions.Click += delegate { EditExclusions(); };
+
             btnInstall = MakeLightButton(IsInstalled
                 ? Lang.T("btn.installedPF") : Lang.T("btn.installPF"), Ico.Download);
             btnInstall.BackColor = Theme.Card;
@@ -652,6 +940,7 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(btnPerfNormal);
             cardSettingsPanel.Controls.Add(btnPerfHigh);
             cardSettingsPanel.Controls.Add(perfHint);
+            cardSettingsPanel.Controls.Add(btnQuarExclusions);
             cardSettingsPanel.Controls.Add(btnInstall);
             cardSettingsPanel.Controls.Add(btnFixWinTemp);
 
@@ -842,13 +1131,22 @@ namespace ClamAVUI
             if (btnQuarExclusions != null) btnQuarExclusions.Text = Lang.T("btn.exclusions");
             if (btnQuarDelete != null) btnQuarDelete.Text = Lang.T("btn.deleteForever");
             if (btnQuarRestore != null) btnQuarRestore.Text = Lang.T("btn.restore");
-            if (btnQuarToExcl != null) btnQuarToExcl.Text = Lang.T("btn.toExclusions");
+            if (btnQuarToExcl != null) btnQuarToExcl.Text = Lang.T("btn.restoreExclude");
             if (btnQuarOpenFolder != null) btnQuarOpenFolder.Text = Lang.T("btn.openFolder");
             if (quarList != null)
             {
-                quarList.Columns[0].Text = Lang.T("col.file");
-                quarList.Columns[1].Text = Lang.T("col.origin");
-                quarList.Columns[2].Text = Lang.T("col.when");
+                UpdateQuarHeaders();
+                quarMenuRestore.Text = Lang.T("btn.restore");
+                // "&&": a menu item treats a single "&" as a mnemonic marker
+                quarMenuRestoreExcl.Text = Lang.T("btn.restoreExclude").Replace("&", "&&");
+                quarMenuDelete.Text = Lang.T("menu.deleteForever");
+                quarMenuOpen.Text = Lang.T("menu.openOrigin");
+                quarMenuProps.Text = Lang.T("menu.properties");
+                quarEmpty.Title = Lang.T("quarantine.emptyTitle");
+                quarEmpty.Sub = Lang.T("quarantine.emptySub");
+                quarEmpty.Invalidate();
+                if (quarSearch.IsHandleCreated) SetQuarSearchCue();
+                if (pages != null && pages[2] != null && pages[2].Visible) ReloadQuarantineList();
             }
             btnStop.Text = Lang.T("btn.stop");
             dashStop.Text = Lang.T("btn.stop");

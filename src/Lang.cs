@@ -88,6 +88,30 @@ namespace ClamAVUI
             A("log.showDetails", "Details", "Деталі");
             A("section.scan", "Scan", "Сканування");
             A("section.summary", "Summary", "Підсумок");
+
+            // Quarantine page
+            A("col.size", "Size", "Розмір");
+            A("col.source", "Source", "Джерело");
+            A("btn.restoreExclude", "Restore & exclude", "Відновити й виключити");
+            A("quarantine.searchCue", "Search quarantine…", "Пошук у карантині…");
+            A("quarantine.emptyTitle", "No files in quarantine", "У карантині порожньо");
+            A("quarantine.emptySub", "Detected threats will appear here.", "Виявлені загрози з'являтимуться тут.");
+            A("quarantine.reasonManual", "Manual", "Вручну");
+            A("stat.quarFiles", "Files", "Файлів");
+            A("stat.totalSize", "Total size", "Загальний розмір");
+            A("stat.lastDetection", "Last detection", "Останнє виявлення");
+            A("status.selected", "Selected: {0}", "Вибрано: {0}");
+            A("menu.openOrigin", "Open original folder", "Відкрити початкову папку");
+            A("menu.properties", "Properties", "Властивості");
+            A("prop.title", "File properties", "Властивості файлу");
+            A("prop.file", "File", "Файл");
+            A("prop.threat", "Threat", "Загроза");
+            A("prop.origin", "Original path", "Початковий шлях");
+            A("prop.source", "Source", "Джерело");
+            A("prop.when", "Quarantined", "У карантині з");
+            A("prop.size", "Size", "Розмір");
+            A("btn.copyHash", "COPY HASH", "КОПІЮВАТИ ХЕШ");
+            A("status.hashCopied", "SHA256 copied to clipboard.", "SHA256 скопійовано в буфер обміну.");
             A("btn.installedPF", "INSTALLED TO PROGRAM FILES", "ВСТАНОВЛЕНО В PROGRAM FILES");
             A("btn.installPF", "INSTALL TO PROGRAM FILES", "ВСТАНОВИТИ В PROGRAM FILES");
             A("btn.fixWinTemp", "FIX C:\\WINDOWS\\TEMP ACCESS", "ВІДНОВИТИ ДОСТУП ДО C:\\WINDOWS\\TEMP");
@@ -95,7 +119,8 @@ namespace ClamAVUI
             A("btn.toExclusions", "To exclusions", "У виключення");
             A("btn.delete", "Delete", "Видалити");
             A("btn.toQuarantine", "To quarantine", "В карантин");
-            A("btn.deleteForever", "Delete permanently", "Видалити назавжди");
+            A("btn.deleteForever", "Delete", "Видалити");
+            A("menu.deleteForever", "Delete permanently", "Видалити назавжди");
             A("btn.restore", "Restore", "Відновити");
             A("btn.openFolder", "Open folder", "Відкрити папку");
             A("btn.deleteFile", "Delete file", "Видалити файл");

@@ -78,10 +78,12 @@ namespace ClamAVUI
             }
 
             Color fg = Enabled ? TextColor : Theme.Muted;
+            // NoPrefix: button labels may contain a literal "&" ("Restore & exclude")
+            const TextFormatFlags NoPre = TextFormatFlags.NoPrefix;
             if (Icon == null)
             {
                 TextRenderer.DrawText(g, Text, Font, ClientRectangle, fg,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | NoPre);
                 return;
             }
             if (CardStyle)
@@ -110,17 +112,17 @@ namespace ClamAVUI
                 {
                     var textRect = new Rectangle(4, textTop, Width - 8, Height - textTop - 6);
                     TextRenderer.DrawText(g, Text, Font, textRect, fg,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak | NoPre);
                 }
                 else
                 {
                     // label on one line + a muted caption below (dashboard action tiles)
                     TextRenderer.DrawText(g, Text, Font, new Rectangle(4, textTop - 2, Width - 8, 17), fg,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis | NoPre);
                     using (var sf = new Font("Segoe UI", 7.75f))
                         TextRenderer.DrawText(g, SubText, sf, new Rectangle(4, textTop + 16, Width - 8, 15),
                             Enabled ? Theme.Muted : Color.FromArgb(100, 106, 120),
-                            TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis | NoPre);
                 }
             }
             else
@@ -133,7 +135,7 @@ namespace ClamAVUI
                 Icon(g, iconRect, fg);
                 var textRect = new Rectangle(startX + iconBox + gap, 0, Width - (startX + iconBox + gap) - 4, Height);
                 TextRenderer.DrawText(g, Text, Font, textRect, fg,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | NoPre);
             }
         }
     }
@@ -442,6 +444,34 @@ namespace ClamAVUI
                     x += cell + 28;
                 }
             }
+        }
+    }
+
+    // Friendly placeholder shown instead of an empty list (shield glyph + two lines)
+    class EmptyState : Control
+    {
+        public string Title = "", Sub = "";
+
+        public EmptyState()
+        {
+            BackColor = Theme.LogBg;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
+                | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.Clear(BackColor);
+            float cx = Width / 2f, cy = Height / 2f;
+            Ico.ShieldIcon(g, new RectangleF(cx - 26, cy - 78, 52, 52), Color.FromArgb(70, 76, 92));
+            using (var tf = new Font("Segoe UI Semibold", 12f))
+                TextRenderer.DrawText(g, Title, tf, new Rectangle(0, (int)cy - 12, Width, 30),
+                    Theme.Text, TextFormatFlags.HorizontalCenter | TextFormatFlags.Top);
+            TextRenderer.DrawText(g, Sub, Font, new Rectangle(0, (int)cy + 20, Width, 24),
+                Theme.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.Top);
         }
     }
 

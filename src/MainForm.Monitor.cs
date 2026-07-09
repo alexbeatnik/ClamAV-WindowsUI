@@ -132,7 +132,7 @@ namespace ClamAVUI
                             MessageBox.Show(dlg, string.Format(Lang.T("msg.onlyExistingToQuarantine"), p), Lang.T("quarantine.title"));
                             continue;
                         }
-                        if (QuarantineFile(p)) exclusions.Remove(p);
+                        if (QuarantineFile(p, "", Lang.T("quarantine.reasonManual"))) exclusions.Remove(p);
                     }
                     SaveSettings();
                     UpdateStatsUi();

@@ -846,10 +846,15 @@ namespace ClamAVUI
                 finalName = Path.GetFileName(dest);
             }
             catch { }
+            // the FOUND line for this file arrived just before the move — take its signature
+            string threat = "";
+            foreach (string[] ff in foundFiles)
+                if (string.Equals(ff[0], original, StringComparison.OrdinalIgnoreCase)) { threat = ff[1]; break; }
             try
             {
                 File.AppendAllText(quarIndex,
-                    finalName + "|" + original + "|" + DateTime.Now.ToString("yyyy-MM-dd HH:mm") + "\r\n",
+                    finalName + "|" + original + "|" + DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+                    + "|" + threat + "|" + currentScanDesc + "\r\n",
                     new UTF8Encoding(false));
             }
             catch { }
