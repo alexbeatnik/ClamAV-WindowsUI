@@ -820,10 +820,24 @@ namespace ClamAVUI
                     else statusLabel.Text = string.Format(Lang.T("status.scannedFound"), scannedCount, foundCount);
                 }
             }
+            else if (line.EndsWith(" ERROR"))
+            {
+                scannedCount++;
+                if (monitorScan) AppendLog(line + "\r\n", Theme.Muted, "ERROR", true);
+                else AppendLog(line + "\r\n", Theme.Danger, "ERROR", true);
+                if (scannedCount % 10 == 0 || scannedCount == totalToScan)
+                {
+                    if (totalToScan > 0) UpdateScanProgress();
+                    else statusLabel.Text = string.Format(Lang.T("status.scannedFound"), scannedCount, foundCount);
+                }
+            }
             else if (!monitorScan && line.Trim().Length > 0)
             {
                 // raw scanner chatter (access-denied warnings etc.) — details only
-                AppendLog(line + "\r\n", Theme.Muted, null, true);
+                if (line.IndexOf("warning", StringComparison.OrdinalIgnoreCase) >= 0)
+                    AppendLog(line + "\r\n", Theme.Warn, "WARN", true);
+                else
+                    AppendLog(line + "\r\n", Theme.Muted, null, true);
             }
         }
 
