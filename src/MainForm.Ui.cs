@@ -543,7 +543,7 @@ namespace ClamAVUI
             if (quarList == null || quarList.Columns.Count < 5) return;
             int other = quarList.Columns[0].Width + quarList.Columns[1].Width
                 + quarList.Columns[3].Width + quarList.Columns[4].Width;
-            int w = quarList.ClientSize.Width - other - 4;
+            int w = quarList.ClientSize.Width - other - 2;
             if (w > 120) quarList.Columns[2].Width = w;
         }
 

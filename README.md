@@ -65,7 +65,12 @@ anytime from Settings — no restart required.
   can't be launched accidentally and a resident AV (Windows Defender) won't
   detect and rip files out of the quarantine folder; restoring reverses the
   transform. The dashboard quarantine card shows a live counter of files
-  currently in quarantine
+  currently in quarantine. The quarantine page shows the **threat name**,
+  **size**, origin path, and detection date per file, with **search**
+  (by name, path, or threat), **sortable columns**, an info strip (count /
+  total size / last detection), a right-click **context menu**, and a
+  **Properties** dialog (double-click) with the **SHA256 of the original
+  content** — ready to paste into VirusTotal
 - **Exclusions**: a file can be removed from the exclusion list, deleted
   from disk, or sent **to quarantine**
 - **USB scan offer**: when a removable drive (flash stick, card reader) is
