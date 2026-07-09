@@ -899,14 +899,40 @@ namespace ClamAVUI
             // like one more action applied to the selected file
             btnQuarExclusions = MakeLightButton(Lang.T("btn.exclusions"), Ico.Ban);
             btnQuarExclusions.BackColor = Theme.Card;
-            btnQuarExclusions.SetBounds(520, 216, 200, 30);
+            btnQuarExclusions.SetBounds(520, 216, 260, 30);
             btnQuarExclusions.Click += delegate { EditExclusions(); };
 
-            btnInstall = MakeLightButton(IsInstalled
-                ? Lang.T("btn.installedPF") : Lang.T("btn.installPF"), Ico.Download);
+            // STATUS block: engine / database / monitoring / quarantine at a glance
+            setStatusHeader = new Label();
+            setStatusHeader.Text = Lang.T("settings.status").ToUpperInvariant();
+            setStatusHeader.Font = new Font("Segoe UI Semibold", 8f);
+            setStatusHeader.ForeColor = Theme.Muted;
+            setStatusHeader.AutoSize = true;
+            setStatusHeader.BackColor = Theme.Card;
+            setStatusHeader.Location = new Point(520, 272);
+            cardSettingsPanel.Controls.Add(setStatusHeader);
+            setStatusCaps = new Label[4];
+            setStatusVals = new Label[4];
+            for (int i = 0; i < 4; i++)
+            {
+                setStatusCaps[i] = new Label();
+                setStatusCaps[i].AutoSize = true;
+                setStatusCaps[i].ForeColor = Theme.Muted;
+                setStatusCaps[i].BackColor = Theme.Card;
+                setStatusCaps[i].Location = new Point(520, 298 + i * 28);
+                setStatusVals[i] = new Label();
+                setStatusVals[i].AutoSize = true;
+                setStatusVals[i].Font = new Font("Segoe UI Semibold", 9.5f);
+                setStatusVals[i].BackColor = Theme.Card;
+                setStatusVals[i].Location = new Point(660, 298 + i * 28);
+                cardSettingsPanel.Controls.Add(setStatusCaps[i]);
+                cardSettingsPanel.Controls.Add(setStatusVals[i]);
+            }
+
+            btnInstall = MakeLightButton(Lang.T("btn.installPF"), Ico.Download);
             btnInstall.BackColor = Theme.Card;
             btnInstall.SetBounds(20, 362, 290, 30);
-            btnInstall.Enabled = !IsInstalled;
+            btnInstall.Visible = !IsInstalled;
             btnInstall.Click += delegate
             {
                 if (MessageBox.Show(this,
@@ -914,6 +940,17 @@ namespace ClamAVUI
                     AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     LaunchInstaller();
             };
+
+            // when already installed, a quiet green badge instead of a disabled button
+            installedBadge = new Label();
+            installedBadge.Text = "✓ " + Lang.T("badge.installedPF");
+            installedBadge.Font = new Font("Segoe UI Semibold", 9.5f);
+            installedBadge.ForeColor = Theme.Good;
+            installedBadge.BackColor = Theme.Card;
+            installedBadge.AutoSize = true;
+            installedBadge.Location = new Point(20, 368);
+            installedBadge.Visible = IsInstalled;
+            cardSettingsPanel.Controls.Add(installedBadge);
 
             // Only relevant if C:\Windows\Temp isn't watchable yet — hidden once fixed
             // (via this button, or automatically after --install elevates and fixes it).
@@ -957,6 +994,7 @@ namespace ClamAVUI
             }
             if (idx == 0) { UpdateStatsUi(); RefreshHistory(); }
             if (idx == 2) { ReloadQuarantineList(); }
+            if (idx == 3) { RefreshSettingsStatus(); }
         }
 
         // Shows just the last line of scans.log — the full history is one click
@@ -1093,14 +1131,47 @@ namespace ClamAVUI
         void UpdatePerfButtons()
         {
             var btns = new ModernButton[] { btnPerfLow, btnPerfNormal, btnPerfHigh };
+            string[] keys = { "perf.low", "perf.normal", "perf.high" };
             for (int i = 0; i < btns.Length; i++)
             {
                 bool on = perfMode == i;
+                // radio-style ●/○ marker makes the active mode obvious at a glance
+                btns[i].Text = (on ? "● " : "○ ") + Lang.T(keys[i]);
                 btns[i].Back = on ? Theme.Accent : Theme.Btn;
                 btns[i].Hover = on ? Theme.AccentHot : Theme.BtnHot;
                 btns[i].TextColor = on ? Theme.Text : Theme.BtnText;
                 btns[i].Invalidate();
             }
+        }
+
+        // Refreshes the STATUS block on the settings page (engine / db / monitor / quarantine)
+        void RefreshSettingsStatus()
+        {
+            if (setStatusVals == null) return;
+            setStatusCaps[0].Text = Lang.T("sstat.engine");
+            setStatusCaps[1].Text = Lang.T("sstat.database");
+            setStatusCaps[2].Text = Lang.T("sstat.monitoring");
+            setStatusCaps[3].Text = Lang.T("sstat.quarantine");
+
+            bool engine = clamDir != null;
+            setStatusVals[0].Text = engine
+                ? (clamVersion != "—" ? "ClamAV " + clamVersion : Lang.T("sval.ready"))
+                : Lang.T("sval.notFound");
+            setStatusVals[0].ForeColor = engine ? Theme.Good : Theme.Danger;
+
+            bool db = DbExists();
+            setStatusVals[1].Text = db ? DbDateString() : "—";
+            setStatusVals[1].ForeColor = db ? Theme.Good : Theme.Warn;
+
+            bool mon = chkMonitor.Checked;
+            setStatusVals[2].Text = mon
+                ? Lang.T("sval.enabled") + " (" + watchDirs.Count + ")"
+                : Lang.T("sval.disabled");
+            setStatusVals[2].ForeColor = mon ? Theme.Good : Theme.Muted;
+
+            int q = QuarantineCount();
+            setStatusVals[3].Text = string.Format(Lang.T("sval.filesN"), q);
+            setStatusVals[3].ForeColor = q > 0 ? Theme.Warn : Theme.Text;
         }
 
         // Re-applies text to every persistent control after a language switch.
@@ -1165,10 +1236,11 @@ namespace ClamAVUI
             UpdateLangButtons();
             perfLabel.Text = Lang.T("settings.performance");
             perfHint.Text = Lang.T("settings.perfHint");
-            btnPerfLow.Text = Lang.T("perf.low");
-            btnPerfNormal.Text = Lang.T("perf.normal");
-            btnPerfHigh.Text = Lang.T("perf.high");
-            btnInstall.Text = Lang.T(IsInstalled ? "btn.installedPF" : "btn.installPF");
+            UpdatePerfButtons(); // re-applies the localized ●/○ labels
+            setStatusHeader.Text = Lang.T("settings.status").ToUpperInvariant();
+            RefreshSettingsStatus();
+            btnInstall.Text = Lang.T("btn.installPF");
+            installedBadge.Text = "✓ " + Lang.T("badge.installedPF");
             btnFixWinTemp.Text = Lang.T("btn.fixWinTemp");
 
             trayOpenItem.Text = Lang.T("tray.open");

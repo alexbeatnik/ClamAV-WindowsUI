@@ -89,6 +89,9 @@ namespace ClamAVUI
         ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
         ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
         Label perfLabel, perfHint;
+        Label installedBadge;                  // green "✓ Installed to Program Files" badge
+        Label setStatusHeader;                 // STATUS block on the settings page
+        Label[] setStatusCaps, setStatusVals;  // engine / database / monitoring / quarantine
         ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
         ListView quarList;
         StatStrip quarStrip;          // files / total size / last detection above the list

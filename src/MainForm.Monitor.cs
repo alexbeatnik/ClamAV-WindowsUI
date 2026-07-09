@@ -22,6 +22,7 @@ namespace ClamAVUI
         void UpdateMonitorLabel()
         {
             chkMonitor.Text = string.Format(Lang.T("settings.monitorLabel"), watchDirs.Count);
+            RefreshSettingsStatus(); // folder count shows in the STATUS block too
         }
 
         void EditWatchDirs()
@@ -266,6 +267,7 @@ namespace ClamAVUI
             if (chkMonitor.Checked) StartWatchers();
             else StopWatchers();
             SaveSettings();
+            RefreshSettingsStatus();
             statusLabel.Text = chkMonitor.Checked
                 ? Lang.T("status.monitorOn")
                 : Lang.T("status.monitorOff");

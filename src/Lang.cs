@@ -76,13 +76,13 @@ namespace ClamAVUI
             A("btn.updateDb", "UPDATE DATABASE", "ОНОВИТИ БАЗИ");
             A("btn.openLog", "OPEN LOG FILE", "ВІДКРИТИ ФАЙЛ ЖУРНАЛУ");
             A("btn.openQuarantine", "OPEN QUARANTINE", "ВІДКРИТИ КАРАНТИН");
-            A("btn.exclusions", "EXCLUSIONS", "ВИКЛЮЧЕННЯ");
+            A("btn.exclusions", "MANAGE EXCLUSIONS…", "КЕРУВАТИ ВИКЛЮЧЕННЯМИ…");
             A("btn.quick", "QUICK", "ШВИДКИЙ");
             A("btn.file", "FILE", "ФАЙЛ");
             A("btn.folder", "FOLDER", "ПАПКА");
             A("btn.stop", "STOP", "ЗУПИНИТИ");
             A("btn.clearLog", "CLEAR", "ОЧИСТИТИ");
-            A("btn.folders", "FOLDERS…", "ПАПКИ…");
+            A("btn.folders", "MANAGE…", "КЕРУВАТИ…");
 
             // Logs page
             A("log.showDetails", "Details", "Деталі");
@@ -138,6 +138,17 @@ namespace ClamAVUI
             A("settings.autostart", "Start with Windows (in tray)", "Запускати разом з Windows (у треї)");
             A("settings.language", "Interface language:", "Мова інтерфейсу:");
             A("settings.usbPrompt", "Offer to scan USB drives when connected", "Пропонувати перевірку USB-накопичувачів при підключенні");
+            A("settings.status", "Status", "Стан");
+            A("sstat.engine", "Engine", "Рушій");
+            A("sstat.database", "Database", "Бази");
+            A("sstat.monitoring", "Monitoring", "Моніторинг");
+            A("sstat.quarantine", "Quarantine", "Карантин");
+            A("sval.ready", "Ready", "Готовий");
+            A("sval.notFound", "Not found", "Не знайдено");
+            A("sval.enabled", "Enabled", "Увімкнено");
+            A("sval.disabled", "Disabled", "Вимкнено");
+            A("sval.filesN", "{0} files", "Файлів: {0}");
+            A("badge.installedPF", "Installed to Program Files", "Встановлено в Program Files");
             A("settings.performance", "Scan performance:", "Продуктивність сканування:");
             A("settings.perfHint", "Low — quieter PC, slower scans. High — fastest, loads the CPU.",
                 "Низька — тихіше для ПК, повільніше. Висока — найшвидше, навантажує процесор.");
