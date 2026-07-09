@@ -368,6 +368,7 @@ namespace ClamAVUI
             monitorScan = true;
             countGen++; // the total is known upfront, no background counting needed
             totalToScan = files.Count;
+            initialFilesToScan = files.Count;
             AppendSection(Lang.T("desc.autoCheck"));
             AppendLog(string.Format(Lang.T("log.newFilesHeader"), DateTime.Now, files.Count), Theme.Text, "SCAN", false);
             SetBusy(true, string.Format(Lang.T("status.autoCheck"), files.Count));

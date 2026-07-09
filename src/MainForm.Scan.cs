@@ -493,6 +493,7 @@ namespace ClamAVUI
                             return;
                         }
                         totalToScan = files.Count;
+                        initialFilesToScan = files.Count;
                         loggedTotal = true;
                         AppendLog(string.Format(Lang.T("log.filesToCheck"), files.Count) + "\r\n\r\n", Theme.Text, "SCAN", false);
                         StartDaemonScan(files);
@@ -892,6 +893,11 @@ namespace ClamAVUI
                     scannedCount, FormatSpan(DateTime.Now - scanStart), foundCount),
                     foundCount > 0 ? Theme.Danger : Theme.Text,
                     foundCount > 0 ? "INFECTED" : "SCAN", false);
+                if (scannedCount < initialFilesToScan)
+                {
+                    int skipped = initialFilesToScan - scannedCount;
+                    AppendLog(string.Format(Lang.T("log.skippedExplanation"), skipped) + "\r\n", Theme.Muted, null, false);
+                }
             }
             if (exitCode == 0 || exitCode == 1)
             {

@@ -41,6 +41,7 @@ namespace ClamAVUI
 
         // Progress: total file count (computed in the background), generation to cancel counting
         int totalToScan;
+        int initialFilesToScan;
         int countGen;
         DateTime scanStart;
         DateTime rateWinTime = DateTime.MinValue;     // start of the moving window used to estimate rate
