@@ -81,7 +81,13 @@ namespace ClamAVUI
             A("btn.file", "FILE", "ФАЙЛ");
             A("btn.folder", "FOLDER", "ПАПКА");
             A("btn.stop", "STOP", "ЗУПИНИТИ");
+            A("btn.clearLog", "CLEAR", "ОЧИСТИТИ");
             A("btn.folders", "FOLDERS…", "ПАПКИ…");
+
+            // Logs page
+            A("log.showDetails", "Details", "Деталі");
+            A("section.scan", "Scan", "Сканування");
+            A("section.summary", "Summary", "Підсумок");
             A("btn.installedPF", "INSTALLED TO PROGRAM FILES", "ВСТАНОВЛЕНО В PROGRAM FILES");
             A("btn.installPF", "INSTALL TO PROGRAM FILES", "ВСТАНОВИТИ В PROGRAM FILES");
             A("btn.fixWinTemp", "FIX C:\\WINDOWS\\TEMP ACCESS", "ВІДНОВИТИ ДОСТУП ДО C:\\WINDOWS\\TEMP");
@@ -183,7 +189,7 @@ namespace ClamAVUI
             A("log.buildingList", "Building file list…\r\n", "Складаю список файлів…\r\n");
             A("status.scanning", "Scanning…", "Сканування…");
             A("log.listCreateFailedInline", "Could not create the file list ({0}), passing files on the command line.\r\n", "Не вдалося створити список файлів ({0}), передаю в рядку.\r\n");
-            A("log.newFilesHeader", "\r\n[{0:HH:mm:ss}] New files ({1}) — auto-check:\r\n", "\r\n[{0:HH:mm:ss}] Нові файли ({1}) — автоперевірка:\r\n");
+            A("log.newFilesHeader", "New files ({1}) — auto-check:\r\n", "Нові файли ({1}) — автоперевірка:\r\n");
             A("status.autoCheck", "Auto-checking new files: {0}…", "Автоперевірка нових файлів: {0}…");
             A("log.filesToCheck", "Files to check: {0}", "Файлів для перевірки: {0}");
             A("desc.autoCheck", "auto-check of new files", "автоперевірка нових файлів");
@@ -197,11 +203,11 @@ namespace ClamAVUI
             A("time.s", "{0:0}s", "{0:0} с");
 
             // Heartbeat
-            A("log.hbListing", "[{0:HH:mm:ss}] Building file list… found {1}, elapsed {2}\r\n", "[{0:HH:mm:ss}] Складаю список файлів… знайдено {1}, минуло {2}\r\n");
-            A("log.hbEngineLoading", "[{0:HH:mm:ss}] Engine is loading the database into memory… elapsed {1}\r\n", "[{0:HH:mm:ss}] Рушій вантажить бази в пам'ять… минуло {1}\r\n");
-            A("log.hbRunning", "[{0:HH:mm:ss}] Running… scanned {1}, elapsed {2}\r\n", "[{0:HH:mm:ss}] Триває… проскановано {1}, минуло {2}\r\n");
-            A("log.hbBigFile", "[{0:HH:mm:ss}] Scanning a large file… scanned {1} of {2} ({3:0}%), elapsed {4}\r\n", "[{0:HH:mm:ss}] Сканую великий файл… проскановано {1} із {2} ({3:0}%), минуло {4}\r\n");
-            A("log.hbProgress", "[{0:HH:mm:ss}] Scanned {1} of {2} ({3:0}%), {4} files remaining{5}{6}\r\n", "[{0:HH:mm:ss}] Проскановано {1} із {2} ({3:0}%), залишилось {4} файлів{5}{6}\r\n");
+            A("log.hbListing", "Building file list… found {1}, elapsed {2}\r\n", "Складаю список файлів… знайдено {1}, минуло {2}\r\n");
+            A("log.hbEngineLoading", "Engine is loading the database into memory… elapsed {1}\r\n", "Рушій вантажить бази в пам'ять… минуло {1}\r\n");
+            A("log.hbRunning", "Running… scanned {1}, elapsed {2}\r\n", "Триває… проскановано {1}, минуло {2}\r\n");
+            A("log.hbBigFile", "Scanning a large file… scanned {1} of {2} ({3:0}%), elapsed {4}\r\n", "Сканую великий файл… проскановано {1} із {2} ({3:0}%), минуло {4}\r\n");
+            A("log.hbProgress", "Scanned {1} of {2} ({3:0}%), {4} files remaining{5}{6}\r\n", "Проскановано {1} із {2} ({3:0}%), залишилось {4} файлів{5}{6}\r\n");
             A("log.threatsSuffix", ", threats: {0}", ", загроз: {0}");
 
             // Log file / history
@@ -211,7 +217,7 @@ namespace ClamAVUI
             // Auto-update
             A("status.dbUpToDate", "Signature database is up to date.", "Бази сигнатур актуальні.");
             A("tray.dbUpdateDownloading", "A database update is available — downloading…", "Вийшло оновлення баз сигнатур — завантажую…");
-            A("log.dbNewerAutoDownload", "\r\n[{0:HH:mm}] A newer database is available — downloading automatically…\r\n", "\r\n[{0:HH:mm}] Доступні новіші бази — завантажую автоматично…\r\n");
+            A("log.dbNewerAutoDownload", "\r\nA newer database is available — downloading automatically…\r\n", "\r\nДоступні новіші бази — завантажую автоматично…\r\n");
             A("hero.dbUpdateAvailable", "A signature database update is available", "Доступне оновлення баз сигнатур");
             A("status.dbUpdateAvailablePress", "A database update is available — press \"Update Database\".", "Доступне оновлення баз — натисни «Оновити бази».");
             A("tray.dbUpdateAvailablePress", "A signature database update is available — press \"Update Database\".", "Доступне оновлення баз сигнатур — натисни «Оновити бази».");
@@ -312,7 +318,7 @@ namespace ClamAVUI
                 + "забагато запитів). Це мине саме собою, орієнтовно після {0}.\r\n"
                 + "Повторні спроби можуть подовжити блокування. Спробувати все одно?");
             A("log.updatingDbFirstTime", "Updating the signature database (first time is ~200 MB, please wait)…\r\n\r\n", "Оновлюю бази сигнатур (перший раз це ~200 МБ, зачекай)…\r\n\r\n");
-            A("log.autoUpdating", "\r\n[{0:HH:mm}] Auto-updating database…\r\n", "\r\n[{0:HH:mm}] Автооновлення баз…\r\n");
+            A("log.autoUpdating", "Auto-updating database…\r\n", "Автооновлення баз…\r\n");
             A("status.autoUpdatingDb", "Auto-updating database…", "Автооновлення баз…");
             A("status.updatingDb", "Updating database…", "Оновлення баз…");
             A("hero.updatingDb", "Updating database", "Оновлення баз");

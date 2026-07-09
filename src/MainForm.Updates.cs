@@ -324,11 +324,15 @@ namespace ClamAVUI
             cancelUpdate = false;
             if (!auto)
             {
-                log.Clear();
+                ClearLog();
+                AppendSection(Lang.T("btn.updateDb"));
                 AppendLog(Lang.T("log.updatingDbFirstTime"), Theme.Text);
             }
             else
+            {
+                AppendSection(Lang.T("btn.updateDb"));
                 AppendLog(string.Format(Lang.T("log.autoUpdating"), DateTime.Now), Theme.Muted);
+            }
             SetBusy(true, auto ? Lang.T("status.autoUpdatingDb") : Lang.T("status.updatingDb"));
             SetHero(ShieldState.Busy, Lang.T("hero.updatingDb"), Lang.T("hero.downloadingSignatures"));
 

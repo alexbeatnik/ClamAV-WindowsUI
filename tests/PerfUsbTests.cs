@@ -29,6 +29,26 @@ namespace ClamAVUI.Tests
         }
     }
 
+    static class ProgressBarTextTests
+    {
+        public static void TestEmptyAndFull()
+        {
+            Assert.Equal("░░░░░░░░░░░░░░░░░░", MainForm.ProgressBarText(0), "0% is all empty cells");
+            Assert.Equal("██████████████████", MainForm.ProgressBarText(1), "100% is all full cells");
+        }
+
+        public static void TestHalf()
+        {
+            Assert.Equal("█████████░░░░░░░░░", MainForm.ProgressBarText(0.5), "50% fills half");
+        }
+
+        public static void TestClampsOutOfRange()
+        {
+            Assert.Equal(MainForm.ProgressBarText(0), MainForm.ProgressBarText(-3), "negative clamps to 0");
+            Assert.Equal(MainForm.ProgressBarText(1), MainForm.ProgressBarText(7), "over 1 clamps to 1");
+        }
+    }
+
     static class UsbMaskTests
     {
         public static void TestSingleBitMapsToLetter()

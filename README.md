@@ -75,6 +75,12 @@ anytime from Settings — no restart required.
   single scanner process at reduced OS priority so the PC stays fully
   responsive; High uses more clamd threads and parallel scan processes at
   elevated priority for the fastest scan
+- **Readable log**: every line carries a timestamp and a colored severity tag
+  (`[INFO]`/`[SCAN]`/`[OK]`/`[WARN]`/`[INFECTED]`), scan phases are separated
+  by stage banners, a live text progress bar shows `scanned / total (%)`,
+  and a **Details** toggle hides path lists and raw scanner chatter for a
+  compact view. Auto-scroll follows the tail but stops yanking the view
+  when you scroll up to read
 - **Statistics**: number of scans, threats found, and files in quarantine
 - Autostart with Windows — **enabled automatically on first run**
   (`HKCU\...\Run` registry key, starts in the tray); the checkbox can be

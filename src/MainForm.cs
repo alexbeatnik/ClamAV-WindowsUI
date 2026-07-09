@@ -85,7 +85,7 @@ namespace ClamAVUI
         };
 
         // UI
-        ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog;
+        ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog, btnClearLog;
         ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
         ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
         Label perfLabel, perfHint;
@@ -93,9 +93,9 @@ namespace ClamAVUI
         ListView quarList;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
         RichTextBox log;
-        Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel;
+        Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, scanProgressLabel;
         ShieldIndicator shield;
-        Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt;
+        Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt, chkLogDetails;
         SlimMarquee progress;
         NotifyIcon tray;
         ToolStripItem trayOpenItem, trayExitItem;
@@ -241,6 +241,7 @@ namespace ClamAVUI
                 dashStop.Visible = busy;
                 dashQuick.Visible = !busy;
             }
+            if (scanProgressLabel != null) scanProgressLabel.Text = ""; // fresh readout per scan
             if (busy)
             {
                 progress.Start();
@@ -257,13 +258,151 @@ namespace ClamAVUI
             if (status != null) statusLabel.Text = status;
         }
 
+        // ---------- Log rendering ----------
+        // Entries are kept in a list so the view can be re-rendered when the Details
+        // toggle changes. Every visible line gets a timestamp and a colored [TAG]
+        // prefix; "detail" entries (path lists, raw scanner chatter) are hidden
+        // unless the toggle is on.
+
+        sealed class LogEntry
+        {
+            public DateTime Time;
+            public string Text;
+            public Color Color;
+            public string Tag;   // null = inferred from Color
+            public bool Detail;  // hidden unless the Details toggle is on
+            public bool Section; // stage banner instead of a normal line
+        }
+
+        readonly List<LogEntry> logEntries = new List<LogEntry>();
+        static readonly Color StampColor = Color.FromArgb(100, 106, 122); // dimmer than Muted
+
         void AppendLog(string text, Color color)
+        {
+            AppendLog(text, color, null, false);
+        }
+
+        void AppendLog(string text, Color color, string tag, bool detail)
+        {
+            var e = new LogEntry();
+            e.Time = DateTime.Now;
+            e.Text = text;
+            e.Color = color;
+            e.Tag = tag;
+            e.Detail = detail;
+            logEntries.Add(e);
+            if (!e.Detail || chkLogDetails.Checked) RenderEntry(e);
+        }
+
+        // Stage banner ("════ QUICK SCAN ════") — makes scan phases easy to spot
+        void AppendSection(string title)
+        {
+            var e = new LogEntry();
+            e.Time = DateTime.Now;
+            e.Text = title;
+            e.Color = Theme.Accent;
+            e.Section = true;
+            logEntries.Add(e);
+            RenderEntry(e);
+        }
+
+        void ClearLog()
+        {
+            logEntries.Clear();
+            log.Clear();
+        }
+
+        // Re-renders the whole view (after toggling Details)
+        void RebuildLog()
+        {
+            log.Clear();
+            foreach (LogEntry e in logEntries)
+                if (e.Section || !e.Detail || chkLogDetails.Checked) RenderEntry(e);
+            log.SelectionStart = log.TextLength;
+            log.ScrollToCaret();
+        }
+
+        static string TagFor(LogEntry e)
+        {
+            if (e.Tag != null) return e.Tag;
+            if (e.Color == Theme.Good) return "OK";
+            if (e.Color == Theme.Warn) return "WARN";
+            if (e.Color == Theme.Danger) return "ERROR";
+            return "INFO";
+        }
+
+        static Color TagColor(string tag)
+        {
+            switch (tag)
+            {
+                case "OK": return Theme.Good;
+                case "WARN": return Theme.Warn;
+                case "SCAN": return Theme.Accent;
+                case "ERROR":
+                case "INFECTED": return Theme.Danger;
+                default: return Theme.Muted;
+            }
+        }
+
+        void RenderEntry(LogEntry e)
+        {
+            bool follow = LogAtBottom(); // don't yank the view if the user scrolled up
+            if (e.Section)
+            {
+                AppendRt((log.TextLength > 0 ? "\r\n" : "") + "═══════════  ", StampColor);
+                AppendRt(e.Text.ToUpperInvariant(), Theme.Accent);
+                AppendRt("  ═══════════\r\n", StampColor);
+            }
+            else
+            {
+                string tag = TagFor(e);
+                string stamp = e.Time.ToString("HH:mm:ss") + "  ";
+                string pad = ("[" + tag + "]").PadRight(11); // [INFECTED] is the widest tag
+                // texts arrive with embedded newlines — prefix every non-empty line
+                string[] lines = e.Text.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].Length == 0)
+                    {
+                        if (i < lines.Length - 1) AppendRt("\r\n", e.Color); // blank spacer line
+                        continue;
+                    }
+                    AppendRt(stamp, StampColor);
+                    AppendRt(pad, TagColor(tag));
+                    AppendRt(lines[i] + "\r\n", e.Color);
+                }
+            }
+            if (follow)
+            {
+                log.SelectionStart = log.TextLength;
+                log.ScrollToCaret();
+            }
+        }
+
+        void AppendRt(string text, Color color)
         {
             log.SelectionStart = log.TextLength;
             log.SelectionColor = color;
             log.AppendText(text);
             log.SelectionColor = log.ForeColor;
-            log.ScrollToCaret();
+        }
+
+        // True when the view is scrolled to (or near) the last line
+        bool LogAtBottom()
+        {
+            if (log.TextLength == 0) return true;
+            int lastVisible = log.GetLineFromCharIndex(log.GetCharIndexFromPosition(
+                new Point(3, log.ClientSize.Height - 1)));
+            int lastLine = log.GetLineFromCharIndex(log.TextLength);
+            return lastVisible >= lastLine - 2;
+        }
+
+        // Text progress bar for the Logs page ("██████░░░░░░")
+        internal static string ProgressBarText(double f)
+        {
+            const int cells = 18;
+            int full = (int)Math.Round(Math.Max(0, Math.Min(1, f)) * cells);
+            return new string('█', full) + new string('░', cells - full);
         }
 
         // ---------- Autostart ----------

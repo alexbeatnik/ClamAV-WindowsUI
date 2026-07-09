@@ -362,7 +362,29 @@ namespace ClamAVUI
             btnStop.Enabled = false;
             btnStop.Click += delegate { StopCurrent(); };
 
+            btnClearLog = MakeButton(Lang.T("btn.clearLog"), 120, Theme.Bg, Theme.CardLine, Ico.Trash);
+            btnClearLog.BackColor = Theme.Card;
+            btnClearLog.Click += delegate { ClearLog(); };
+
+            // hides path lists and raw scanner chatter unless the user wants them
+            chkLogDetails = new Toggle(Lang.T("log.showDetails"));
+            chkLogDetails.BackColor = Theme.Card;
+            chkLogDetails.Margin = new Padding(16, 8, 8, 0);
+            chkLogDetails.CheckedChanged += delegate { RebuildLog(); SaveSettings(); };
+
+            // live progress readout ("██████░░░░  3150 / 10091 (31%)") — clamscan itself
+            // prints nothing useful, but we know the exact file count upfront
+            scanProgressLabel = new Label();
+            scanProgressLabel.AutoSize = true;
+            scanProgressLabel.Font = new Font("Consolas", 10f);
+            scanProgressLabel.ForeColor = Theme.AccentHot;
+            scanProgressLabel.BackColor = Theme.Card;
+            scanProgressLabel.Margin = new Padding(16, 12, 0, 0);
+
             buttonsRow.Controls.Add(btnStop);
+            buttonsRow.Controls.Add(btnClearLog);
+            buttonsRow.Controls.Add(chkLogDetails);
+            buttonsRow.Controls.Add(scanProgressLabel);
 
             log = new RichTextBox();
             log.Dock = DockStyle.Fill;
@@ -830,6 +852,8 @@ namespace ClamAVUI
             }
             btnStop.Text = Lang.T("btn.stop");
             dashStop.Text = Lang.T("btn.stop");
+            btnClearLog.Text = Lang.T("btn.clearLog");
+            chkLogDetails.Text = Lang.T("log.showDetails");
             btnWatchDirs.Text = Lang.T("btn.folders");
 
             chkRiskyOnly.Text = Lang.T("settings.riskyOnly");

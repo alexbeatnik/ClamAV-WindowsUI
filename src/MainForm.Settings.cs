@@ -157,7 +157,7 @@ namespace ClamAVUI
 
             loadingSettings = true;
             bool monitor = false, quarantine = false, autoUpdate = true, riskyOnly = true, fullRisky = true;
-            bool usbPrompt = true;
+            bool usbPrompt = true, logDetails = false;
             if (File.Exists(settingsPath))
             {
                 foreach (string line in File.ReadAllLines(settingsPath))
@@ -179,6 +179,7 @@ namespace ClamAVUI
                     else if (t == "riskyonly=0") riskyOnly = false;
                     else if (t == "fullrisky=0") fullRisky = false;
                     else if (t == "usbprompt=0") usbPrompt = false;
+                    else if (t == "logdetails=1") logDetails = true;
                     else if (t == "perf=low") perfMode = 0;
                     else if (t == "perf=high") perfMode = 2;
                     else if (t == "autostartinit=1") autostartInitialized = true;
@@ -253,6 +254,7 @@ namespace ClamAVUI
             chkRiskyOnly.Checked = riskyOnly;
             chkFullRisky.Checked = fullRisky;
             chkUsbPrompt.Checked = usbPrompt;
+            chkLogDetails.Checked = logDetails;
             UpdatePerfButtons(); // reflect the loaded perf mode
             chkMonitor.Checked = monitor; // CheckedChanged will start the watchers itself
             loadingSettings = false;
@@ -305,6 +307,7 @@ namespace ClamAVUI
             sb.AppendLine("riskyonly=" + (chkRiskyOnly.Checked ? "1" : "0"));
             sb.AppendLine("fullrisky=" + (chkFullRisky.Checked ? "1" : "0"));
             sb.AppendLine("usbprompt=" + (chkUsbPrompt.Checked ? "1" : "0"));
+            sb.AppendLine("logdetails=" + (chkLogDetails.Checked ? "1" : "0"));
             sb.AppendLine("perf=" + (perfMode == 0 ? "low" : perfMode == 2 ? "high" : "normal"));
             sb.AppendLine("autostartinit=" + (autostartInitialized ? "1" : "0"));
             sb.AppendLine("watchinit=" + (watchInitialized ? "3" : "0"));
