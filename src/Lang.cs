@@ -102,6 +102,20 @@ namespace ClamAVUI
             A("settings.fullRisky", "Full scan: risky file types only (much faster)", "У повному скані перевіряти лише небезпечні типи (набагато швидше)");
             A("settings.autostart", "Start with Windows (in tray)", "Запускати разом з Windows (у треї)");
             A("settings.language", "Interface language:", "Мова інтерфейсу:");
+            A("settings.usbPrompt", "Offer to scan USB drives when connected", "Пропонувати перевірку USB-накопичувачів при підключенні");
+            A("settings.performance", "Scan performance:", "Продуктивність сканування:");
+            A("settings.perfHint", "Low — quieter PC, slower scans. High — fastest, loads the CPU.",
+                "Низька — тихіше для ПК, повільніше. Висока — найшвидше, навантажує процесор.");
+            A("perf.low", "Low", "Низька");
+            A("perf.normal", "Normal", "Звичайна");
+            A("perf.high", "High", "Висока");
+
+            // USB drive detection
+            A("usb.title", "New drive detected", "Виявлено новий накопичувач");
+            A("usb.scanPrompt", "New drive detected: {0}\r\n\r\nScan it for threats now?",
+                "Підключено новий накопичувач: {0}\r\n\r\nПеревірити його на загрози зараз?");
+            A("tray.usbBusy", "Drive {0} connected. A scan is already running — you can check it later from the dashboard.",
+                "Підключено диск {0}. Сканування вже триває — перевірити його можна пізніше з панелі.");
             A("msg.installConfirm", "The app will be copied to {0} together with ClamAV and the database,\r\nStart Menu/Desktop shortcuts will be created, and it will be registered in \"Apps\".\r\nAdministrator rights are required. Continue?",
                 "Програма скопіюється в {0} разом із ClamAV і базами,\r\nз'являться ярлики в Пуску, на робочому столі та запис у «Програмах».\r\nПотрібні права адміністратора. Продовжити?");
             A("msg.fixWinTempConfirm", "On this PC, C:\\Windows\\Temp is locked down so even reading its contents is denied "

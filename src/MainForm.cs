@@ -37,6 +37,7 @@ namespace ClamAVUI
         bool monitorScan;    // true if the current scan was triggered by the monitor, not the user
         bool reallyClose;    // true = exit, false = minimize to tray
         bool autostartInitialized; // whether autostart was already auto-enabled on first run
+        int perfMode = 1;    // scan performance: 0 = low, 1 = normal, 2 = high (see Perf* helpers)
 
         // Progress: total file count (computed in the background), generation to cancel counting
         int totalToScan;
@@ -86,13 +87,15 @@ namespace ClamAVUI
         // UI
         ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog;
         ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
+        ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
+        Label perfLabel, perfHint;
         ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
         ListView quarList;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
         RichTextBox log;
         Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel;
         ShieldIndicator shield;
-        Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky;
+        Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt;
         SlimMarquee progress;
         NotifyIcon tray;
         ToolStripItem trayOpenItem, trayExitItem;
@@ -201,6 +204,7 @@ namespace ClamAVUI
             try
             {
                 p.Start();
+                ApplyScanPriority(p);
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
                 currentProc = p;

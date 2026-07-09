@@ -66,6 +66,34 @@ namespace ClamAVUI
                  + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
         }
 
+        // ---------- Scan performance (Settings → Low / Normal / High) ----------
+        // Low keeps the PC responsive during a scan (single scanner process at reduced
+        // OS priority); High trades CPU for speed (more clamd threads + parallel
+        // clamdscan processes at elevated priority). Normal is the pre-0.0.4 behavior.
+
+        internal static int PerfMaxThreads(int mode)
+        {
+            return mode == 0 ? 2 : mode == 2 ? 16 : 8; // clamd worker threads
+        }
+
+        // Upper bound on parallel clamdscan processes (capped by CPU count at the call site)
+        internal static int PerfMaxProcs(int mode)
+        {
+            return mode == 0 ? 1 : mode == 2 ? 8 : 4;
+        }
+
+        internal static ProcessPriorityClass PerfPriority(int mode)
+        {
+            return mode == 0 ? ProcessPriorityClass.BelowNormal
+                 : mode == 2 ? ProcessPriorityClass.AboveNormal
+                 : ProcessPriorityClass.Normal;
+        }
+
+        void ApplyScanPriority(Process p)
+        {
+            try { p.PriorityClass = PerfPriority(perfMode); } catch { } // process may have exited already
+        }
+
         // ---------- Progress, log, auto-update ----------
 
         internal static string FormatSpan(TimeSpan t)
@@ -487,7 +515,7 @@ namespace ClamAVUI
             File.WriteAllText(Path.Combine(clamDir, "clamd.conf"),
                 "TCPSocket " + ClamdPort + "\r\n" +
                 "TCPAddr 127.0.0.1\r\n" +
-                "MaxThreads 8\r\n" +
+                "MaxThreads " + PerfMaxThreads(perfMode) + "\r\n" +
                 "DatabaseDirectory \"" + dbDir + "\"\r\n" +
                 // same limits as ScanLimitsArg uses for clamscan
                 "MaxScanSize 100M\r\nMaxFileSize 50M\r\nMaxRecursion 6\r\n" +
@@ -550,6 +578,7 @@ namespace ClamAVUI
                         psi.RedirectStandardError = true;
                         psi.WorkingDirectory = clamDir;
                         var p = Process.Start(psi);
+                        ApplyScanPriority(p); // clamd does the actual scanning work
                         string lastLine = "";
                         p.OutputDataReceived += delegate(object s, DataReceivedEventArgs e)
                             { if (!string.IsNullOrEmpty(e.Data)) lastLine = e.Data; };
@@ -646,8 +675,9 @@ namespace ClamAVUI
                 return;
             }
 
-            // as many list chunks as parallel clamdscan processes
-            int n = files.Count >= 200 ? Math.Max(2, Math.Min(4, Environment.ProcessorCount)) : 1;
+            // as many list chunks as parallel clamdscan processes (perf mode sets the cap)
+            int maxProcs = Math.Min(PerfMaxProcs(perfMode), Environment.ProcessorCount);
+            int n = files.Count >= 200 && maxProcs >= 2 ? Math.Max(2, maxProcs) : 1;
             var chunks = new List<string>();
             if (n > 1)
             {
@@ -729,6 +759,7 @@ namespace ClamAVUI
             try
             {
                 p.Start();
+                ApplyScanPriority(p);
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
                 scanProcs.Add(p);

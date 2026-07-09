@@ -68,6 +68,13 @@ anytime from Settings — no restart required.
   currently in quarantine
 - **Exclusions**: a file can be removed from the exclusion list, deleted
   from disk, or sent **to quarantine**
+- **USB scan offer**: when a removable drive (flash stick, card reader) is
+  plugged in, the app asks "New drive detected — scan now?" — one click
+  starts a scan of the whole drive. Can be turned off in Settings
+- **Scan performance modes** (Settings → Low / Normal / High): Low runs a
+  single scanner process at reduced OS priority so the PC stays fully
+  responsive; High uses more clamd threads and parallel scan processes at
+  elevated priority for the fastest scan
 - **Statistics**: number of scans, threats found, and files in quarantine
 - Autostart with Windows — **enabled automatically on first run**
   (`HKCU\...\Run` registry key, starts in the tray); the checkbox can be
@@ -155,6 +162,7 @@ src/                       — the application (WinForms, C# 5), compiled into o
   MainForm.Quarantine.cs   — quarantine storage, index, threat dialog
   MainForm.Monitor.cs      — folder monitoring, exclusions
   MainForm.Scan.cs         — scans, progress/ETA, clamd engine
+  MainForm.Usb.cs          — USB drive detection, scan-on-connect prompt
   MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
 tests/                     — unit tests + the zero-dependency test runner
 clamav.ico     — app icon (exe + window + tray), ClamAV logo

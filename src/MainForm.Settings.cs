@@ -157,6 +157,7 @@ namespace ClamAVUI
 
             loadingSettings = true;
             bool monitor = false, quarantine = false, autoUpdate = true, riskyOnly = true, fullRisky = true;
+            bool usbPrompt = true;
             if (File.Exists(settingsPath))
             {
                 foreach (string line in File.ReadAllLines(settingsPath))
@@ -177,6 +178,9 @@ namespace ClamAVUI
                     else if (t == "autoupdate=0") autoUpdate = false;
                     else if (t == "riskyonly=0") riskyOnly = false;
                     else if (t == "fullrisky=0") fullRisky = false;
+                    else if (t == "usbprompt=0") usbPrompt = false;
+                    else if (t == "perf=low") perfMode = 0;
+                    else if (t == "perf=high") perfMode = 2;
                     else if (t == "autostartinit=1") autostartInitialized = true;
                     else if (t == "watchinit=1") watchInitialized = true;
                     else if (t == "watchinit=2") { watchInitialized = true; watchDefaultsV2 = true; }
@@ -248,6 +252,8 @@ namespace ClamAVUI
             chkAutoUpdate.Checked = autoUpdate;
             chkRiskyOnly.Checked = riskyOnly;
             chkFullRisky.Checked = fullRisky;
+            chkUsbPrompt.Checked = usbPrompt;
+            UpdatePerfButtons(); // reflect the loaded perf mode
             chkMonitor.Checked = monitor; // CheckedChanged will start the watchers itself
             loadingSettings = false;
             ApplyLanguage(); // picks up the loaded language setting and re-texts the UI
@@ -298,6 +304,8 @@ namespace ClamAVUI
             sb.AppendLine("autoupdate=" + (chkAutoUpdate.Checked ? "1" : "0"));
             sb.AppendLine("riskyonly=" + (chkRiskyOnly.Checked ? "1" : "0"));
             sb.AppendLine("fullrisky=" + (chkFullRisky.Checked ? "1" : "0"));
+            sb.AppendLine("usbprompt=" + (chkUsbPrompt.Checked ? "1" : "0"));
+            sb.AppendLine("perf=" + (perfMode == 0 ? "low" : perfMode == 2 ? "high" : "normal"));
             sb.AppendLine("autostartinit=" + (autostartInitialized ? "1" : "0"));
             sb.AppendLine("watchinit=" + (watchInitialized ? "3" : "0"));
             sb.AppendLine("lang=" + (Lang.Current == Lang.Language.Ukrainian ? "uk" : "en"));

@@ -530,28 +530,59 @@ namespace ClamAVUI
             chkAutostart.Checked = IsAutostartEnabled();
             chkAutostart.CheckedChanged += delegate { SetAutostart(chkAutostart.Checked); };
 
+            chkUsbPrompt = MakeCheck(Lang.T("settings.usbPrompt"), 20, 272);
+            chkUsbPrompt.Checked = true;
+            chkUsbPrompt.CheckedChanged += delegate { SaveSettings(); };
+
             langLabel = new Label();
             langLabel.Text = Lang.T("settings.language");
             langLabel.AutoSize = true;
             langLabel.ForeColor = Theme.Text;
             langLabel.BackColor = Theme.Card;
-            langLabel.Location = new Point(20, 286);
+            langLabel.Location = new Point(20, 322);
             btnLangEn = MakeButton("English", 90, Theme.Btn, Theme.BtnHot);
             btnLangEn.TextColor = Theme.BtnText;
             btnLangEn.BackColor = Theme.Card;
-            btnLangEn.SetBounds(180, 280, 90, 30);
+            btnLangEn.SetBounds(180, 316, 90, 30);
             btnLangEn.Click += delegate { SetLanguage(Lang.Language.English); };
             btnLangUk = MakeButton("Українська", 110, Theme.Btn, Theme.BtnHot);
             btnLangUk.TextColor = Theme.BtnText;
             btnLangUk.BackColor = Theme.Card;
-            btnLangUk.SetBounds(276, 280, 110, 30);
+            btnLangUk.SetBounds(276, 316, 110, 30);
             btnLangUk.Click += delegate { SetLanguage(Lang.Language.Ukrainian); };
             UpdateLangButtons();
+
+            // Scan performance selector — right column, clear of the FOLDERS… button above
+            perfLabel = new Label();
+            perfLabel.Text = Lang.T("settings.performance");
+            perfLabel.AutoSize = true;
+            perfLabel.ForeColor = Theme.Text;
+            perfLabel.BackColor = Theme.Card;
+            perfLabel.Location = new Point(520, 96);
+            btnPerfLow = MakeButton(Lang.T("perf.low"), 90, Theme.Btn, Theme.BtnHot);
+            btnPerfLow.SetBounds(520, 122, 90, 30);
+            btnPerfLow.Click += delegate { SetPerfMode(0); };
+            btnPerfNormal = MakeButton(Lang.T("perf.normal"), 110, Theme.Btn, Theme.BtnHot);
+            btnPerfNormal.SetBounds(616, 122, 110, 30);
+            btnPerfNormal.Click += delegate { SetPerfMode(1); };
+            btnPerfHigh = MakeButton(Lang.T("perf.high"), 90, Theme.Btn, Theme.BtnHot);
+            btnPerfHigh.SetBounds(732, 122, 90, 30);
+            btnPerfHigh.Click += delegate { SetPerfMode(2); };
+            foreach (ModernButton b in new ModernButton[] { btnPerfLow, btnPerfNormal, btnPerfHigh })
+                b.BackColor = Theme.Card;
+            perfHint = new Label();
+            perfHint.Text = Lang.T("settings.perfHint");
+            perfHint.AutoSize = true;
+            perfHint.MaximumSize = new Size(302, 0); // wrap inside the card at the minimum window width
+            perfHint.ForeColor = Theme.Muted;
+            perfHint.BackColor = Theme.Card;
+            perfHint.Location = new Point(520, 160);
+            UpdatePerfButtons();
 
             btnInstall = MakeLightButton(IsInstalled
                 ? Lang.T("btn.installedPF") : Lang.T("btn.installPF"), Ico.Download);
             btnInstall.BackColor = Theme.Card;
-            btnInstall.SetBounds(20, 326, 290, 30);
+            btnInstall.SetBounds(20, 362, 290, 30);
             btnInstall.Enabled = !IsInstalled;
             btnInstall.Click += delegate
             {
@@ -565,7 +596,7 @@ namespace ClamAVUI
             // (via this button, or automatically after --install elevates and fixes it).
             btnFixWinTemp = MakeLightButton(Lang.T("btn.fixWinTemp"), Ico.Unlock);
             btnFixWinTemp.BackColor = Theme.Card;
-            btnFixWinTemp.SetBounds(20, 364, 290, 30);
+            btnFixWinTemp.SetBounds(20, 400, 290, 30);
             btnFixWinTemp.Visible = !CanWatchDirectory(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             btnFixWinTemp.Click += delegate { FixWinTempAccess(); };
@@ -577,9 +608,15 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(chkAutoUpdate);
             cardSettingsPanel.Controls.Add(chkFullRisky);
             cardSettingsPanel.Controls.Add(chkAutostart);
+            cardSettingsPanel.Controls.Add(chkUsbPrompt);
             cardSettingsPanel.Controls.Add(langLabel);
             cardSettingsPanel.Controls.Add(btnLangEn);
             cardSettingsPanel.Controls.Add(btnLangUk);
+            cardSettingsPanel.Controls.Add(perfLabel);
+            cardSettingsPanel.Controls.Add(btnPerfLow);
+            cardSettingsPanel.Controls.Add(btnPerfNormal);
+            cardSettingsPanel.Controls.Add(btnPerfHigh);
+            cardSettingsPanel.Controls.Add(perfHint);
             cardSettingsPanel.Controls.Add(btnInstall);
             cardSettingsPanel.Controls.Add(btnFixWinTemp);
 
@@ -719,6 +756,29 @@ namespace ClamAVUI
             btnLangUk.Invalidate();
         }
 
+        // ---------- Scan performance selector ----------
+
+        void SetPerfMode(int mode)
+        {
+            if (perfMode == mode) return;
+            perfMode = mode;
+            UpdatePerfButtons();
+            SaveSettings();
+        }
+
+        void UpdatePerfButtons()
+        {
+            var btns = new ModernButton[] { btnPerfLow, btnPerfNormal, btnPerfHigh };
+            for (int i = 0; i < btns.Length; i++)
+            {
+                bool on = perfMode == i;
+                btns[i].Back = on ? Theme.Accent : Theme.Btn;
+                btns[i].Hover = on ? Theme.AccentHot : Theme.BtnHot;
+                btns[i].TextColor = on ? Theme.Text : Theme.BtnText;
+                btns[i].Invalidate();
+            }
+        }
+
         // Re-applies text to every persistent control after a language switch.
         // Dialogs and message boxes need no such handling: they're built fresh
         // each time they're opened and simply pick up the current language.
@@ -760,9 +820,15 @@ namespace ClamAVUI
             chkAutoUpdate.Text = Lang.T("settings.autoUpdate");
             chkFullRisky.Text = Lang.T("settings.fullRisky");
             chkAutostart.Text = Lang.T("settings.autostart");
+            chkUsbPrompt.Text = Lang.T("settings.usbPrompt");
             UpdateMonitorLabel();
             langLabel.Text = Lang.T("settings.language");
             UpdateLangButtons();
+            perfLabel.Text = Lang.T("settings.performance");
+            perfHint.Text = Lang.T("settings.perfHint");
+            btnPerfLow.Text = Lang.T("perf.low");
+            btnPerfNormal.Text = Lang.T("perf.normal");
+            btnPerfHigh.Text = Lang.T("perf.high");
             btnInstall.Text = Lang.T(IsInstalled ? "btn.installedPF" : "btn.installPF");
             btnFixWinTemp.Text = Lang.T("btn.fixWinTemp");
 
@@ -778,6 +844,7 @@ namespace ClamAVUI
         protected override void WndProc(ref Message m)
         {
             if (m.Msg == WmShow && WmShow != 0) RestoreFromTray();
+            if (m.Msg == WM_DEVICECHANGE) HandleDeviceChange(ref m); // USB drive plugged in
             base.WndProc(ref m);
         }
 
