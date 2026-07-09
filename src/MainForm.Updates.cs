@@ -44,7 +44,8 @@ namespace ClamAVUI
             bool success = false;
             try
             {
-                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | (System.Net.SecurityProtocolType)12288;
+                const System.Net.SecurityProtocolType Tls13 = (System.Net.SecurityProtocolType)12288;
+                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | Tls13;
                 string json;
                 using (var api = new System.Net.WebClient())
                 {
@@ -184,7 +185,8 @@ namespace ClamAVUI
 
             SetBusy(true, Lang.T("status.findingLatestClamAV"));
             SetHero(ShieldState.Busy, Lang.T("hero.installingClamAV"), Lang.T("hero.findingLatestRelease"));
-            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | (System.Net.SecurityProtocolType)12288;
+            const System.Net.SecurityProtocolType Tls13 = (System.Net.SecurityProtocolType)12288;
+            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | Tls13;
 
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
@@ -350,7 +352,8 @@ namespace ClamAVUI
 
         void DbUpdateWorker()
         {
-            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | (System.Net.SecurityProtocolType)12288;
+            const System.Net.SecurityProtocolType Tls13 = (System.Net.SecurityProtocolType)12288;
+            System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | Tls13;
             string err = null;
             int updated = 0;
             try

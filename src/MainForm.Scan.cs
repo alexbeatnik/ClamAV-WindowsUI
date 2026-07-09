@@ -882,6 +882,7 @@ namespace ClamAVUI
             monitorScan = false;
             countGen++; // stop the background file counter
             totalToScan = 0;
+            initialFilesToScan = 0;
             StopClamd(); // the daemon lives only for the duration of the scan
             CleanupBatchLists();
             if (movedCount > 0) NeutralizeQuarantineFolder(); // safety net for --move drops
@@ -896,7 +897,7 @@ namespace ClamAVUI
                 if (scannedCount < initialFilesToScan)
                 {
                     int skipped = initialFilesToScan - scannedCount;
-                    AppendLog(string.Format(Lang.T("log.skippedExplanation"), skipped) + "\r\n", Theme.Muted, null, false);
+                    AppendLog(string.Format(Lang.T("log.skippedExplanation"), skipped), Theme.Muted, null, false);
                 }
             }
             if (exitCode == 0 || exitCode == 1)
