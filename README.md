@@ -107,6 +107,15 @@ anytime from Settings — no restart required.
   shows a tray notification, and swaps itself in on restart — no manual
   download needed. Works in both portable and installed-to-Program-Files
   mode (no admin prompt)
+- **Portable or installed — the first run asks**: started outside
+  `Program Files`, the app offers a one-time choice — install to
+  `C:\Program Files\ClamAV UI` (one UAC prompt, shortcuts, an "Apps" entry)
+  or stay portable with the current folder as the root for ClamAV, the
+  database, quarantine and settings. Installing later is one button in
+  Settings
+- **About dialog** (Settings → About): version, a short description, a
+  quick-start guide for first-time users, and project links — star the
+  repo, browse all releases, follow the author
 
 ## Building
 
@@ -133,16 +142,19 @@ request (`.github/workflows/tests.yml`).
 ## Installing on a new PC
 
 Just **copy the single `ClamAVUI.exe`** into any folder and run it.
-The app offers two options:
+On the first start (when not already running from Program Files) the app
+asks how you want to use it — the choice is remembered and asked only once:
 
 - **Install to Program Files** (one UAC prompt): the exe is copied to
-  `C:\Program Files\ClamAV UI`, ClamAV is downloaded from GitHub there
-  (~220 MB) along with the signature database; Start Menu and Desktop
-  shortcuts are created, and the app appears in "Programs and Features"
-  with an uninstall option. Folder permissions are managed via `icacls` so
-  the database can update without admin rights.
-- **Portable mode**: everything downloads into the current folder, no
-  traces left on the system.
+  `C:\Program Files\ClamAV UI` together with anything already sitting next
+  to it (ClamAV, database, quarantine, settings), ClamAV is downloaded from
+  GitHub there (~220 MB) along with the signature database if missing;
+  Start Menu and Desktop shortcuts are created, and the app appears in
+  "Programs and Features" with an uninstall option. Folder permissions are
+  managed via `icacls` so the database can update without admin rights.
+- **Portable mode**: the current folder becomes the root — ClamAV, the
+  signature database, quarantine and `settings.ini` all live next to the
+  exe, no traces left on the system.
 
 Installing to Program Files can also be done later — there's a button in
 Settings. If ClamAV is already sitting next to the exe in a `clamav`
@@ -176,6 +188,7 @@ src/                       — the application (WinForms, C# 5), compiled into o
   MainForm.Usb.cs          — USB drive detection, scan-on-connect prompt
   MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
 tests/                     — unit tests + the zero-dependency test runner
+AGENTS.md      — build/test/style guide for AI coding agents and contributors
 clamav.ico     — app icon (exe + window + tray), ClamAV logo
 logo.png       — header logo (embedded in the exe as a resource)
 build.ps1      — builds the app with the built-in csc.exe

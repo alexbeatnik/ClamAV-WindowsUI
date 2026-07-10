@@ -298,6 +298,21 @@ namespace ClamAVUI
             }
         }
 
+        // Circled "i" — the About dialog
+        public static void Info(Graphics g, RectangleF r, Color c)
+        {
+            float cx = r.X + r.Width / 2f, cy = r.Y + r.Height / 2f, rad = Math.Min(r.Width, r.Height) / 2f * 0.9f;
+            using (var pen = P(c, r, 0.1f))
+                g.DrawEllipse(pen, cx - rad, cy - rad, rad * 2, rad * 2);
+            using (var b = new SolidBrush(c))
+            {
+                float dr = rad * 0.14f;
+                g.FillEllipse(b, cx - dr, cy - rad * 0.52f - dr, dr * 2, dr * 2);
+            }
+            using (var pen = P(c, r, 0.12f))
+                g.DrawLine(pen, cx, cy - rad * 0.1f, cx, cy + rad * 0.5f);
+        }
+
         // Open padlock — restoring a folder permission
         public static void Unlock(Graphics g, RectangleF r, Color c)
         {
