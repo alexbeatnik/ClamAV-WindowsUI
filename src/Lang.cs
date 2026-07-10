@@ -426,12 +426,14 @@ namespace ClamAVUI
                 + "2. QUICK SCAN checks common infection points in minutes.\r\n"
                 + "3. Monitoring checks new files in Downloads, Desktop and other folders automatically.\r\n"
                 + "4. Detections land in Quarantine — restore or delete them there.\r\n"
-                + "5. Closing the window minimizes to tray; protection keeps running.",
+                + "5. Closing the window minimizes to tray; protection keeps running.\r\n"
+                + "6. Runs portable (everything stays in its own folder) or installed to Program Files — the first start asks once; installing later is one button in Settings.",
                 "1. Натисни «ОНОВИТИ БАЗИ» на панелі — перше завантаження ~250 МБ.\r\n"
                 + "2. «ШВИДКИЙ СКАН» за лічені хвилини перевіряє типові місця зараження.\r\n"
                 + "3. Моніторинг автоматично перевіряє нові файли в Downloads, на робочому столі та інших папках.\r\n"
                 + "4. Знахідки потрапляють у Карантин — там їх можна відновити або видалити.\r\n"
-                + "5. Закриття вікна згортає програму в трей; захист продовжує працювати.");
+                + "5. Закриття вікна згортає програму в трей; захист продовжує працювати.\r\n"
+                + "6. Працює портативно (усе лежить у власній папці) або встановленою в Program Files — вибір один раз при першому запуску, встановити можна й пізніше з налаштувань.");
             A("about.star", "★  Star this project on GitHub", "★  Постав зірку проєкту на GitHub");
             A("about.releases", "↓  All releases — download the latest version", "↓  Усі релізи — завантажити найновішу версію");
             A("about.follow", "+  Follow the author on GitHub", "+  Підписатися на автора на GitHub");

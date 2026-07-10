@@ -1027,7 +1027,7 @@ namespace ClamAVUI
             using (var dlg = new Form())
             {
                 dlg.Text = Lang.T("about.title");
-                dlg.ClientSize = new Size(600, 520);
+                dlg.ClientSize = new Size(600, 564);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.MinimizeBox = dlg.MaximizeBox = false;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1070,7 +1070,7 @@ namespace ClamAVUI
                 var how = new Label();
                 how.Text = Lang.T("about.howTo");
                 how.ForeColor = Theme.Text;
-                how.SetBounds(24, 182, dlg.ClientSize.Width - 48, 126);
+                how.SetBounds(24, 182, dlg.ClientSize.Width - 48, 168);
 
                 // accent-colored links in place of buttons — opens the default browser
                 Func<string, string, int, LinkLabel> link = delegate(string text, string url, int y)
@@ -1087,15 +1087,15 @@ namespace ClamAVUI
                     l.LinkClicked += delegate { try { Process.Start(url); } catch { } };
                     return l;
                 };
-                var star = link(Lang.T("about.star"), ProjectUrl, 316);
-                var releases = link(Lang.T("about.releases"), ProjectUrl + "/releases", 344);
-                var follow = link(Lang.T("about.follow"), AuthorUrl, 372);
+                var star = link(Lang.T("about.star"), ProjectUrl, 358);
+                var releases = link(Lang.T("about.releases"), ProjectUrl + "/releases", 386);
+                var follow = link(Lang.T("about.follow"), AuthorUrl, 414);
 
                 var powered = new Label();
                 powered.Text = Lang.T("about.powered");
                 powered.Font = new Font("Segoe UI", 8f);
                 powered.ForeColor = Theme.Muted;
-                powered.SetBounds(24, 412, dlg.ClientSize.Width - 48, 40);
+                powered.SetBounds(24, 452, dlg.ClientSize.Width - 48, 40);
 
                 var buttons = new FlowLayoutPanel();
                 buttons.Dock = DockStyle.Bottom;
