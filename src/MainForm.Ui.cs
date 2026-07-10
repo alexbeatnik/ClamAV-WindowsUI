@@ -43,10 +43,33 @@ namespace ClamAVUI
                 ShowInTaskbar = false;
             }
 
-            // Clean PC: only the exe is present — offer to download ClamAV automatically
+            // The first normal start decides where the app lives (portable vs
+            // Program Files) BEFORE anything is downloaded, so ClamAV, the database
+            // and quarantine land in the right place. After that, a clean PC gets
+            // the ClamAV download offer as before.
             Shown += delegate
             {
-                if (clamDir == null && !startInTray) OfferClamAVDownload();
+                if (startInTray) return;
+                if (!modeAsked && !IsInstalled)
+                {
+                    modeAsked = true; // one-time question, even if UAC is declined later
+                    SaveSettings();
+                    if (MessageBox.Show(this,
+                        string.Format(Lang.T("msg.firstRunModeChoice"), AppDomain.CurrentDomain.BaseDirectory),
+                        AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    {
+                        LaunchInstaller(); // copies everything to Program Files and relaunches from there
+                        return;
+                    }
+                    // portable mode: the current folder stays the root for ClamAV,
+                    // the database, quarantine and settings — just fetch ClamAV if
+                    // it isn't sitting next to the exe yet
+                    if (clamDir == null && MessageBox.Show(this, Lang.T("msg.offerPortableDownload"),
+                            AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                        StartClamAVDownload();
+                    return;
+                }
+                if (clamDir == null) OfferClamAVDownload();
             };
         }
 
@@ -961,6 +984,12 @@ namespace ClamAVUI
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             btnFixWinTemp.Click += delegate { FixWinTempAccess(); };
 
+            // About: description, quick-start steps, and project links (star / releases / follow)
+            btnAbout = MakeLightButton(Lang.T("btn.about"), Ico.Info);
+            btnAbout.BackColor = Theme.Card;
+            btnAbout.SetBounds(20, 438, 290, 30);
+            btnAbout.Click += delegate { ShowAboutDialog(); };
+
             cardSettingsPanel.Controls.Add(chkMonitor);
             cardSettingsPanel.Controls.Add(btnWatchDirs);
             cardSettingsPanel.Controls.Add(chkRiskyOnly);
@@ -980,9 +1009,118 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(btnQuarExclusions);
             cardSettingsPanel.Controls.Add(btnInstall);
             cardSettingsPanel.Controls.Add(btnFixWinTemp);
+            cardSettingsPanel.Controls.Add(btnAbout);
 
             page.Controls.Add(cardSettingsPanel);
             return page;
+        }
+
+        // ---------- About dialog ----------
+
+        const string ProjectUrl = "https://github.com/alexbeatnik/ClamAV-WindowsUI";
+        const string AuthorUrl = "https://github.com/alexbeatnik";
+
+        // Logo + version, a short description, quick-start steps for first-time
+        // users, and project links: star the repo, releases page, follow the author.
+        void ShowAboutDialog()
+        {
+            using (var dlg = new Form())
+            {
+                dlg.Text = Lang.T("about.title");
+                dlg.ClientSize = new Size(600, 520);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MinimizeBox = dlg.MaximizeBox = false;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.BackColor = Theme.Bg;
+                dlg.ForeColor = Theme.Text;
+                dlg.Font = Font;
+                Theme.DarkTitleBar(dlg);
+
+                var logo = new PictureBox();
+                logo.Image = LogoImage;
+                logo.SizeMode = PictureBoxSizeMode.Zoom;
+                logo.SetBounds(24, 18, 128, 60);
+                logo.BackColor = Color.Transparent;
+
+                var name = new Label();
+                name.Text = AppName;
+                name.Font = new Font("Segoe UI Semibold", 16f);
+                name.ForeColor = Theme.Text;
+                name.AutoSize = true;
+                name.Location = new Point(166, 22);
+
+                var ver = new Label();
+                ver.Text = string.Format(Lang.T("about.version"), AppVersion);
+                ver.ForeColor = Theme.Muted;
+                ver.AutoSize = true;
+                ver.Location = new Point(169, 56);
+
+                var desc = new Label();
+                desc.Text = Lang.T("about.desc");
+                desc.ForeColor = Theme.Text;
+                desc.SetBounds(24, 94, dlg.ClientSize.Width - 48, 60);
+
+                var howHeader = new Label();
+                howHeader.Text = Lang.T("about.quickStart").ToUpperInvariant();
+                howHeader.Font = new Font("Segoe UI Semibold", 8f);
+                howHeader.ForeColor = Theme.Muted;
+                howHeader.AutoSize = true;
+                howHeader.Location = new Point(24, 160);
+
+                var how = new Label();
+                how.Text = Lang.T("about.howTo");
+                how.ForeColor = Theme.Text;
+                how.SetBounds(24, 182, dlg.ClientSize.Width - 48, 126);
+
+                // accent-colored links in place of buttons — opens the default browser
+                Func<string, string, int, LinkLabel> link = delegate(string text, string url, int y)
+                {
+                    var l = new LinkLabel();
+                    l.Text = text;
+                    l.AutoSize = true;
+                    l.Location = new Point(24, y);
+                    l.BackColor = Theme.Bg;
+                    l.LinkColor = Theme.Accent;
+                    l.ActiveLinkColor = Theme.AccentHot;
+                    l.VisitedLinkColor = Theme.Accent;
+                    l.LinkBehavior = LinkBehavior.HoverUnderline;
+                    l.LinkClicked += delegate { try { Process.Start(url); } catch { } };
+                    return l;
+                };
+                var star = link(Lang.T("about.star"), ProjectUrl, 316);
+                var releases = link(Lang.T("about.releases"), ProjectUrl + "/releases", 344);
+                var follow = link(Lang.T("about.follow"), AuthorUrl, 372);
+
+                var powered = new Label();
+                powered.Text = Lang.T("about.powered");
+                powered.Font = new Font("Segoe UI", 8f);
+                powered.ForeColor = Theme.Muted;
+                powered.SetBounds(24, 412, dlg.ClientSize.Width - 48, 40);
+
+                var buttons = new FlowLayoutPanel();
+                buttons.Dock = DockStyle.Bottom;
+                buttons.FlowDirection = FlowDirection.RightToLeft;
+                buttons.Height = 52;
+                buttons.Padding = new Padding(10);
+                buttons.BackColor = Theme.Bg;
+                var close = MakeButton(Lang.T("btn.close"), 100, Theme.Card, Theme.Bg, Ico.Close);
+                close.DialogResult = DialogResult.Cancel;
+                buttons.Controls.Add(close);
+
+                dlg.Controls.Add(logo);
+                dlg.Controls.Add(name);
+                dlg.Controls.Add(ver);
+                dlg.Controls.Add(desc);
+                dlg.Controls.Add(howHeader);
+                dlg.Controls.Add(how);
+                dlg.Controls.Add(star);
+                dlg.Controls.Add(releases);
+                dlg.Controls.Add(follow);
+                dlg.Controls.Add(powered);
+                dlg.Controls.Add(buttons);
+                dlg.CancelButton = close;
+                dlg.ShowDialog(this);
+            }
         }
 
         void ShowPage(int idx)
@@ -1242,6 +1380,7 @@ namespace ClamAVUI
             btnInstall.Text = Lang.T("btn.installPF");
             installedBadge.Text = "✓ " + Lang.T("badge.installedPF");
             btnFixWinTemp.Text = Lang.T("btn.fixWinTemp");
+            btnAbout.Text = Lang.T("btn.about");
 
             trayOpenItem.Text = Lang.T("tray.open");
             trayExitItem.Text = Lang.T("tray.exit");

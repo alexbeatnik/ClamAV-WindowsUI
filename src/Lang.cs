@@ -310,6 +310,18 @@ namespace ClamAVUI
             A("status.scanInterrupted", "Scan interrupted or an error occurred (code {0}).", "Сканування перервано або сталася помилка (код {0}).");
 
             // Install / download ClamAV
+            A("msg.firstRunModeChoice", "Welcome! How do you want to use ClamAV UI?\r\n\r\n"
+                + "YES — install to Program Files (recommended): the app copies itself there together\r\n"
+                + "with everything it downloads, adds Start Menu/Desktop shortcuts and an \"Apps\" entry.\r\n"
+                + "Administrator rights are needed once.\r\n\r\n"
+                + "NO — portable mode: everything (ClamAV, signature database, quarantine, settings)\r\n"
+                + "stays in the current folder:\r\n{0}",
+                "Вітаю! Як використовувати ClamAV UI?\r\n\r\n"
+                + "ТАК — встановити в Program Files (рекомендовано): програма скопіюється туди разом\r\n"
+                + "з усім, що завантажить, додасть ярлики в Пуск, на робочий стіл і запис у «Програмах».\r\n"
+                + "Один раз знадобляться права адміністратора.\r\n\r\n"
+                + "НІ — портативний режим: усе (ClamAV, бази сигнатур, карантин, налаштування)\r\n"
+                + "лишиться в поточній папці:\r\n{0}");
             A("status.installCancelled", "Installation cancelled.", "Встановлення скасовано.");
             A("msg.offerInstallChoice", "ClamAV was not found next to the program. How do you want to set it up?\r\n\r\n"
                 + "YES — install to Program Files: the app copies itself there, downloads ClamAV\r\n"
@@ -398,6 +410,36 @@ namespace ClamAVUI
             A("hero.pressUpdateFirstTime", "Press \"Update Database\" — first download is ~250 MB", "Натисни «Оновити бази» — перший раз завантажиться ~250 МБ");
             A("tray.appUpdateInstalling", "Updating ClamAV UI to {0} — the app will restart in a few seconds…", "Оновлюю ClamAV UI до {0} — програма перезапуститься за кілька секунд…");
             A("stats.neverScanned", "never", "ще не було");
+            // About dialog
+            A("btn.about", "ABOUT", "ПРО ПРОГРАМУ");
+            A("about.title", "About ClamAV UI", "Про ClamAV UI");
+            A("about.version", "Version {0} — free & open source", "Версія {0} — безкоштовна, з відкритим кодом");
+            A("about.desc", "A lightweight, portable Windows interface for the free ClamAV antivirus engine: "
+                + "on-demand scans, automatic signature updates, new-file monitoring, USB checks and a "
+                + "neutralized quarantine — no background services, no ads.",
+                "Легкий портативний інтерфейс Windows для безкоштовного антивірусного рушія ClamAV: "
+                + "сканування на вимогу, автооновлення баз сигнатур, моніторинг нових файлів, перевірка USB "
+                + "та знешкоджений карантин — без фонових служб і реклами.");
+            A("about.quickStart", "Quick start", "Швидкий старт");
+            A("about.howTo",
+                "1. Press UPDATE DATABASE on the dashboard — the first download is ~250 MB.\r\n"
+                + "2. QUICK SCAN checks common infection points in minutes.\r\n"
+                + "3. Monitoring checks new files in Downloads, Desktop and other folders automatically.\r\n"
+                + "4. Detections land in Quarantine — restore or delete them there.\r\n"
+                + "5. Closing the window minimizes to tray; protection keeps running.",
+                "1. Натисни «ОНОВИТИ БАЗИ» на панелі — перше завантаження ~250 МБ.\r\n"
+                + "2. «ШВИДКИЙ СКАН» за лічені хвилини перевіряє типові місця зараження.\r\n"
+                + "3. Моніторинг автоматично перевіряє нові файли в Downloads, на робочому столі та інших папках.\r\n"
+                + "4. Знахідки потрапляють у Карантин — там їх можна відновити або видалити.\r\n"
+                + "5. Закриття вікна згортає програму в трей; захист продовжує працювати.");
+            A("about.star", "★  Star this project on GitHub", "★  Постав зірку проєкту на GitHub");
+            A("about.releases", "↓  All releases — download the latest version", "↓  Усі релізи — завантажити найновішу версію");
+            A("about.follow", "+  Follow the author on GitHub", "+  Підписатися на автора на GitHub");
+            A("about.powered", "Powered by the ClamAV® engine (© Cisco Systems, Inc). This project is an independent "
+                + "open-source UI and is not affiliated with Cisco.",
+                "Працює на рушії ClamAV® (© Cisco Systems, Inc). Цей проєкт — незалежний open-source інтерфейс, "
+                + "не афілійований із Cisco.");
+
             // Dashboard stat strip captions
             A("stat.clamav", "ClamAV", "ClamAV");
             A("stat.lastScan", "Last scan", "Останній скан");

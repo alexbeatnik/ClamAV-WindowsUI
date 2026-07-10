@@ -37,6 +37,7 @@ namespace ClamAVUI
         bool monitorScan;    // true if the current scan was triggered by the monitor, not the user
         bool reallyClose;    // true = exit, false = minimize to tray
         bool autostartInitialized; // whether autostart was already auto-enabled on first run
+        bool modeAsked;            // first-run "portable vs Program Files" question already answered
         int perfMode = 1;    // scan performance: 0 = low, 1 = normal, 2 = high (see Perf* helpers)
 
         // Progress: total file count (computed in the background), generation to cancel counting
@@ -87,7 +88,7 @@ namespace ClamAVUI
 
         // UI
         ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog, btnClearLog;
-        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp;
+        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp, btnAbout;
         ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
         Label perfLabel, perfHint;
         Label installedBadge;                  // green "✓ Installed to Program Files" badge

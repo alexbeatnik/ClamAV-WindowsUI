@@ -170,7 +170,8 @@ namespace ClamAVUI
             loadingSettings = true;
             bool monitor = false, quarantine = false, autoUpdate = true, riskyOnly = true, fullRisky = true;
             bool usbPrompt = true, logDetails = false;
-            if (File.Exists(settingsPath))
+            bool hadSettings = File.Exists(settingsPath), modeAskedSeen = false;
+            if (hadSettings)
             {
                 foreach (string line in File.ReadAllLines(settingsPath))
                 {
@@ -195,6 +196,8 @@ namespace ClamAVUI
                     else if (t == "perf=low") perfMode = 0;
                     else if (t == "perf=high") perfMode = 2;
                     else if (t == "autostartinit=1") autostartInitialized = true;
+                    else if (t == "modeasked=1") { modeAsked = true; modeAskedSeen = true; }
+                    else if (t == "modeasked=0") modeAskedSeen = true;
                     else if (t == "watchinit=1") watchInitialized = true;
                     else if (t == "watchinit=2") { watchInitialized = true; watchDefaultsV2 = true; }
                     else if (t == "watchinit=3") { watchInitialized = true; watchDefaultsV2 = true; watchDefaultsV3 = true; }
@@ -228,6 +231,9 @@ namespace ClamAVUI
                     else if (t.StartsWith("totalMoved=")) long.TryParse(t.Substring(11), out totalMoved);
                 }
             }
+            // Pre-0.0.6 settings have no modeasked flag: that setup already exists and
+            // works — don't spring the first-run mode question on an existing user
+            if (hadSettings && !modeAskedSeen) modeAsked = true;
             // First run: add default folders (Downloads, Desktop, Program Files) and
             // enable monitoring right away. Done only once — if the user changes it
             // afterwards, we don't force it back on.
@@ -322,6 +328,7 @@ namespace ClamAVUI
             sb.AppendLine("logdetails=" + (chkLogDetails.Checked ? "1" : "0"));
             sb.AppendLine("perf=" + (perfMode == 0 ? "low" : perfMode == 2 ? "high" : "normal"));
             sb.AppendLine("autostartinit=" + (autostartInitialized ? "1" : "0"));
+            sb.AppendLine("modeasked=" + (modeAsked ? "1" : "0"));
             sb.AppendLine("watchinit=" + (watchInitialized ? "3" : "0"));
             sb.AppendLine("lang=" + (Lang.Current == Lang.Language.Ukrainian ? "uk" : "en"));
             sb.AppendLine("lastscan=" + lastScanInfo);
