@@ -1278,7 +1278,7 @@ namespace ClamAVUI
             }
             StopWatchers();
             StopCurrent();
-            StopClamd();
+            KillClamdNow(); // synchronous: the async StopClamd worker wouldn't survive process exit
             tray.Visible = false;
         }
 

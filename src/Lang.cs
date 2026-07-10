@@ -387,6 +387,8 @@ namespace ClamAVUI
             A("status.autostartOn", "Autostart enabled.", "Автозапуск увімкнено.");
             A("status.autostartOff", "Autostart disabled.", "Автозапуск вимкнено.");
             A("log.clamscanNotFound", "clamscan.exe not found. Press \"Update Database\" to download ClamAV automatically.\r\n", "clamscan.exe не знайдено. Натисни «Оновити бази», щоб завантажити ClamAV автоматично.\r\n");
+            A("log.clamDirNotWritable", "The ClamAV folder is not writable ({0}) — the signature database can't be stored there. Scanning works if a database already exists; otherwise use the portable setup or run the fix from Settings.\r\n",
+                "Папка ClamAV недоступна для запису ({0}) — бази сигнатур не вдасться зберегти в ній. Сканування працюватиме, якщо бази вже є; інакше скористайся портативним варіантом або виправ доступ у налаштуваннях.\r\n");
             A("log.clamAVPath", "ClamAV: {0}\r\n", "ClamAV: {0}\r\n");
             A("hero.clamAVNotFound", "ClamAV not found", "ClamAV не знайдено");
             A("hero.putPortableClamAV", "Place a portable ClamAV build in the \"clamav\" folder next to the program", "Поклади portable ClamAV у папку \"clamav\" поруч з програмою");

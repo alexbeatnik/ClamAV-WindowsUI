@@ -52,7 +52,7 @@ namespace ClamAVUI
                     api.Headers.Add("User-Agent", "ClamAVUI");
                     json = api.DownloadString(UpdateApiUrl);
                 }
-                var vm = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"v?([\\d.]+)\"");
+                var vm = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"[vV]?([\\d.]+)\"");
                 var um = Regex.Match(json, "\"browser_download_url\"\\s*:\\s*\"([^\"]*ClamAVUI\\.exe)\"");
                 if (vm.Success && um.Success)
                 {

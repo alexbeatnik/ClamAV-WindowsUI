@@ -650,6 +650,18 @@ namespace ClamAVUI
             });
         }
 
+        // Synchronous kill for app exit: the queued StopClamd worker dies with the
+        // process before it gets to run, which would leave clamd.exe (hundreds of MB
+        // of RAM) running forever. Kill is fine here — clamd holds no state to flush.
+        void KillClamdNow()
+        {
+            var p = clamdProc;
+            clamdProc = null;
+            if (p == null) return;
+            try { if (!p.HasExited) p.Kill(); } catch { }
+            try { p.Dispose(); } catch { }
+        }
+
         // Writes the full list + chunks, starts clamd, and launches parallel clamdscan
         // processes. If clamd is missing or fails to start, falls back to plain clamscan.
         void StartDaemonScan(List<string> files)

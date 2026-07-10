@@ -52,8 +52,18 @@ namespace ClamAVUI
                 return; // btnUpdate stays enabled: it will trigger the install
             }
             dbDir = Path.Combine(clamDir, "database");
-            if (!Directory.Exists(dbDir)) Directory.CreateDirectory(dbDir);
-            EnsureFreshclamConf();
+            try
+            {
+                // must not crash startup: clamDir can be read-only for us (e.g. the
+                // official ClamAV MSI in Program Files, found by the candidate list
+                // above, with the app running non-elevated)
+                if (!Directory.Exists(dbDir)) Directory.CreateDirectory(dbDir);
+                EnsureFreshclamConf();
+            }
+            catch (Exception ex)
+            {
+                AppendLog(string.Format(Lang.T("log.clamDirNotWritable"), ex.Message), Theme.Warn);
+            }
             FetchClamVersion();
             AppendLog(string.Format(Lang.T("log.clamAVPath"), clamDir), Theme.Muted);
         }
@@ -152,7 +162,9 @@ namespace ClamAVUI
             scanLogPath = Path.Combine(baseDir, "scans.log");
             quarDir = Path.Combine(baseDir, "quarantine");
             quarIndex = Path.Combine(quarDir, "index.txt");
-            if (!Directory.Exists(quarDir)) Directory.CreateDirectory(quarDir);
+            // an unwritable exe folder must not crash startup; quarantine operations
+            // will surface their own errors when actually used
+            try { if (!Directory.Exists(quarDir)) Directory.CreateDirectory(quarDir); } catch { }
             NeutralizeQuarantineFolder(); // migrate a pre-0.0.3 quarantine to the .quar form
 
             loadingSettings = true;

@@ -26,7 +26,8 @@ namespace ClamAVUI
 
         static bool IsInstalled
         {
-            get { return Application.ExecutablePath.StartsWith(InstallDir, StringComparison.OrdinalIgnoreCase); }
+            // IsUnder, not StartsWith: "C:\Program Files\ClamAV UI Beta" must not count
+            get { return IsUnder(Application.ExecutablePath, InstallDir); }
         }
 
         static bool IsAdmin()
