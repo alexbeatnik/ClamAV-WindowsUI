@@ -577,8 +577,9 @@ namespace ClamAVUI
 
         // Promotes a fully downloaded .part file to the live database file.
         // Replace, not Delete+Move: a failure between those two would leave no
-        // working database at all. ReplaceFile swaps in place (same folder), so
-        // at every moment either the old or the new file exists at dest.
+        // working database at all. File.Replace (Win32 ReplaceFile) swaps in
+        // place — at every moment either the old or the new file exists at dest.
+        // The null backup argument is valid on .NET Framework: no backup is kept.
         internal static void PromoteDownloadedFile(string part, string dest)
         {
             if (File.Exists(dest)) File.Replace(part, dest, null);
