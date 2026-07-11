@@ -565,10 +565,7 @@ namespace ClamAVUI
                     TryDelete(part);
                     throw new Exception(string.Format(Lang.T("err.notADatabaseFile"), name));
                 }
-                // Replace, not Delete+Move: a crash between the two would leave no
-                // working database at all. ReplaceFile swaps in place (same folder).
-                if (File.Exists(dest)) File.Replace(part, dest, null);
-                else File.Move(part, dest);
+                PromoteDownloadedFile(part, dest);
                 UiLog(string.Format(Lang.T("log.dbFileDownloaded"), name), Theme.Good);
             }
             catch
@@ -576,6 +573,16 @@ namespace ClamAVUI
                 TryDelete(part);
                 throw;
             }
+        }
+
+        // Promotes a fully downloaded .part file to the live database file.
+        // Replace, not Delete+Move: a failure between those two would leave no
+        // working database at all. ReplaceFile swaps in place (same folder), so
+        // at every moment either the old or the new file exists at dest.
+        internal static void PromoteDownloadedFile(string part, string dest)
+        {
+            if (File.Exists(dest)) File.Replace(part, dest, null);
+            else File.Move(part, dest);
         }
 
         // Thread-safe logging from a background thread

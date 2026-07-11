@@ -807,8 +807,7 @@ namespace ClamAVUI
                     }
                     // the original folder may have been deleted or renamed since
                     // quarantining — recreate it so the restore doesn't dead-end
-                    string originDir = Path.GetDirectoryName(row.Origin);
-                    if (!string.IsNullOrEmpty(originDir)) Directory.CreateDirectory(originDir);
+                    EnsureParentDir(row.Origin);
                     if (row.Path.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase))
                     {
                         // neutralized file: XOR back into the original bytes at the origin path
