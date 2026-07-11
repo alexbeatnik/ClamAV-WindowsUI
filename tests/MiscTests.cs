@@ -1,4 +1,5 @@
-// Tests for the risky-extension filter, the file-lock probe, and theme geometry.
+// Tests for the risky-extension filter, the file-lock probe, theme geometry,
+// the scheduled-scan due rule, the temp-download filter, and the watchability probe.
 using System;
 using System.Drawing;
 using System.IO;
@@ -60,6 +61,85 @@ namespace ClamAVUI.Tests
                     Assert.True(MainForm.IsFileLocked(p), "file opened with FileShare.None");
                 Assert.False(MainForm.IsFileLocked(p), "unlocked again after the handle closes");
             }
+        }
+    }
+
+    static class TempDownloadExtensionTests
+    {
+        public static void TestBrowserTempExtensionsAreSkipped()
+        {
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\setup.exe.crdownload"), ".crdownload (Chrome)");
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\movie.mkv.part"), ".part (Firefox)");
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\x.tmp"), ".tmp");
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\y.opdownload"), ".opdownload (Opera)");
+        }
+
+        public static void TestLookupIsCaseInsensitive()
+        {
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\SETUP.EXE.CRDOWNLOAD"), "upper-case extension");
+        }
+
+        public static void TestFinalNamesAreNotSkipped()
+        {
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\setup.exe"), ".exe");
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\archive.zip"), ".zip");
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\noext"), "no extension at all");
+        }
+
+        public static void TestOnlyTheFinalExtensionCounts()
+        {
+            // after the rename .part → .exe the file must become scannable
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\setup.part.exe"), "temp marker not at the end");
+        }
+    }
+
+    static class CanWatchDirectoryTests
+    {
+        public static void TestExistingReadableDirIsWatchable()
+        {
+            using (var tmp = new TempDir())
+                Assert.True(MainForm.CanWatchDirectory(tmp.Path), "fresh temp dir");
+        }
+
+        public static void TestMissingDirIsNotWatchable()
+        {
+            Assert.False(MainForm.CanWatchDirectory(
+                @"C:\no\such\dir\" + Guid.NewGuid().ToString("N")), "nonexistent dir");
+        }
+    }
+
+    static class ScheduledScanTests
+    {
+        static readonly DateTime Now = new DateTime(2026, 7, 11, 12, 0, 0);
+
+        public static void TestOffNeverDue()
+        {
+            Assert.False(MainForm.ScheduledScanDue(0, DateTime.MinValue, Now), "off + never ran");
+            Assert.False(MainForm.ScheduledScanDue(0, Now.AddYears(-1), Now), "off + long overdue");
+        }
+
+        public static void TestDailyDueAfter24Hours()
+        {
+            Assert.False(MainForm.ScheduledScanDue(1, Now.AddHours(-23), Now), "23h ago — not due yet");
+            Assert.True(MainForm.ScheduledScanDue(1, Now.AddHours(-24), Now), "exactly 24h ago");
+            Assert.True(MainForm.ScheduledScanDue(1, Now.AddDays(-9), Now), "long overdue (PC was off)");
+        }
+
+        public static void TestWeeklyDueAfterSevenDays()
+        {
+            Assert.False(MainForm.ScheduledScanDue(2, Now.AddDays(-6), Now), "6 days ago — not due yet");
+            Assert.True(MainForm.ScheduledScanDue(2, Now.AddDays(-7), Now), "exactly 7 days ago");
+        }
+
+        public static void TestNeverAnchoredCountsAsOverdue()
+        {
+            Assert.True(MainForm.ScheduledScanDue(1, DateTime.MinValue, Now), "daily, never anchored");
+        }
+
+        public static void TestFutureLastRunIsNotDue()
+        {
+            // clock set back: must not fire until real time catches up again
+            Assert.False(MainForm.ScheduledScanDue(1, Now.AddHours(5), Now), "last run in the future");
         }
     }
 

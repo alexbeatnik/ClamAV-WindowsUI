@@ -30,6 +30,10 @@ anytime from Settings — no restart required.
 - **Quick scan** (minutes, not hours): risky file types in common infection
   points — Downloads, Desktop, Documents, Temp, AppData, ProgramData, startup
   folders — plus the executables of every running process
+- **Scheduled quick scan**: the quick scan also runs by itself — weekly by
+  default, switchable to daily or off in Settings. If the PC was off past the
+  due time, the missed scan catches up a few minutes after the next start;
+  nothing runs while another scan, an update, or an open dialog is in the way
 - **Fast full scan**: by default a full scan checks only risky file types
   (exe, scripts, archives, documents) — the app builds the file list itself,
   so the scanner doesn't waste time on gigabyte-sized videos and images;
@@ -114,8 +118,8 @@ anytime from Settings — no restart required.
   database, quarantine and settings. Installing later is one button in
   Settings
 - **About dialog** (Settings → About): version, a short description, a
-  quick-start guide for first-time users, and project links — star the
-  repo, browse all releases, follow the author
+  quick-start guide for first-time users, the Apache 2.0 license, and
+  project links — star the repo, browse all releases, follow the author
 
 ## Building
 
@@ -188,7 +192,9 @@ src/                       — the application (WinForms, C# 5), compiled into o
   MainForm.Usb.cs          — USB drive detection, scan-on-connect prompt
   MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
 tests/                     — unit tests + the zero-dependency test runner
+.claude/skills/            — step-by-step playbooks for AI coding agents (localization, settings, testing, releases, verification)
 AGENTS.md      — build/test/style guide for AI coding agents and contributors
+LICENSE        — Apache License 2.0
 clamav.ico     — app icon (exe + window + tray), ClamAV logo
 logo.png       — header logo (embedded in the exe as a resource)
 build.ps1      — builds the app with the built-in csc.exe
@@ -211,3 +217,13 @@ button). New files are queued with a 3s debounce (so a file has time to
 finish being written; temporary extensions like `.crdownload`/`.part` are
 ignored until they're renamed), then scanned together in one `clamscan`
 batch. If a threat is found, the window is restored and a warning is shown.
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE) — free to
+use, modify, and distribute, including commercially.
+
+ClamAV® itself is a registered trademark of Cisco Systems, Inc. and is
+licensed separately under GPLv2. This project is an independent open-source
+interface that runs the official, unmodified ClamAV binaries as separate
+processes; it does not bundle or link against ClamAV code.

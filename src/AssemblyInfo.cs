@@ -4,5 +4,5 @@ using System.Reflection;
 
 [assembly: AssemblyTitle("ClamAV UI")]
 [assembly: AssemblyProduct("ClamAV UI")]
-[assembly: AssemblyVersion("0.0.6.0")]
-[assembly: AssemblyFileVersion("0.0.6.0")]
+[assembly: AssemblyVersion("0.0.7.0")]
+[assembly: AssemblyFileVersion("0.0.7.0")]

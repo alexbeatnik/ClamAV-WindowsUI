@@ -316,11 +316,10 @@ namespace ClamAVUI
             }
             if (Directory.Exists(path)) return; // files inside it will arrive as separate events
             if (IsExcluded(path)) return;
-            string ext = Path.GetExtension(path).ToLowerInvariant();
             // by default only potentially dangerous types are checked
-            if (chkRiskyOnly != null && chkRiskyOnly.Checked && !RiskyExtensions.Contains(ext)) return;
-            foreach (string t in TempExtensions)
-                if (ext == t) return; // file still downloading: wait for the rename
+            if (chkRiskyOnly != null && chkRiskyOnly.Checked
+                && !RiskyExtensions.Contains(Path.GetExtension(path))) return;
+            if (HasTempDownloadExtension(path)) return; // still downloading: wait for the rename
             pendingFiles[path] = 0;
             debounceTimer.Stop();
             debounceTimer.Start(); // restart: scan once the stream of new files settles down
@@ -349,6 +348,16 @@ namespace ClamAVUI
                 pendingFiles[kvp.Key] = kvp.Value;
             if (pendingFiles.Count == 0) debounceTimer.Stop();
             if (ready.Count > 0) ScanFileBatch(ready);
+        }
+
+        // In-progress browser/downloader files (.crdownload, .part, …): scanning them
+        // is pointless — the monitor waits for the rename to the final name instead
+        internal static bool HasTempDownloadExtension(string path)
+        {
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            foreach (string t in TempExtensions)
+                if (ext == t) return true;
+            return false;
         }
 
         internal static bool IsFileLocked(string path)

@@ -1,0 +1,57 @@
+# Copilot instructions — ClamAV Windows UI
+
+WinForms app compiled with the `csc.exe` built into Windows (.NET Framework
+4.8, compiler v4.0.30319). One portable exe, zero dependencies, zero
+toolchains. `AGENTS.md` is the full contributor guide; `.claude/skills/`
+holds detailed playbooks (localization, settings-key, testing, release,
+verify). License: Apache 2.0.
+
+## Environment constraints — do NOT flag these as issues
+
+The compiler only supports **C# 5**, so the following are deliberate and
+must not be "modernized" in suggestions or review comments:
+
+- No `$"..."` interpolation (`string.Format`/concatenation is correct here).
+- No `?.`, `??=`, `nameof`, expression-bodied members, `out var`, pattern
+  matching, tuples, auto-property initializers, or C# 6+ features of any kind.
+- Anonymous callbacks use `delegate(...) { }` syntax — not lambdas converted
+  to expression trees or newer idioms (plain lambdas do exist and are fine).
+- Threads + `BeginInvoke` instead of `async/await` in most places.
+- No NuGet packages, no third-party libraries, no `.csproj`/`.sln` (file
+  lists live in `build.ps1`/`test.ps1`), no image assets (icons are GDI+
+  code in `src/Icons.cs`).
+- The settings page uses absolute pixel positions by design.
+- UI strings live in `src/Lang.cs`, built in code — no resx, no designer.
+
+## What TO check in review
+
+- **C# 6+ syntax sneaking in** — it breaks the build on a stock machine.
+- **Hardcoded user-visible strings** — every UI/log/tray/dialog string must
+  go through `Lang.T("key")` with **both** English and Ukrainian entries
+  (`A(key, en, uk)` in `src/Lang.cs`); persistent controls must be re-texted
+  in `ApplyLanguage()` (`src/MainForm.Ui.cs`). Format placeholders (`{0}`…)
+  must match between both translations and the call site.
+- **settings.ini keys**: a new key needs a parser line in `LoadSettings()`,
+  a writer line in `SaveSettings()` (`src/MainForm.Settings.cs`), and must
+  degrade gracefully when missing from an old settings file.
+- **Threading**: background work must marshal to the UI thread via
+  `BeginInvoke` wrapped in `try/catch` (the form may already be closed);
+  child `Process` objects set `SynchronizingObject = this`; no UI-thread
+  blocking waits on child processes.
+- **Elevation**: the main app must never require admin. Anything elevated
+  goes through the separate `--install`/`--uninstall`/`--fix-wintemp`
+  relaunch paths (`src/MainForm.Install.cs`).
+- **Tests**: new pure logic should be an `internal static` member of
+  `MainForm` with a test in `tests/` (zero-dependency runner; classes named
+  `*Tests`, methods `Test*`). CI runs `build.ps1` + `test.ps1` on every PR.
+- **Self-update safety**: releases are consumed by the app's self-updater —
+  changes to `.github/workflows/release.yml`, asset names, or versioning in
+  `src/AssemblyInfo.cs` must keep the `ClamAVUI.exe` asset name and strictly
+  increasing versions.
+- Committed artifacts: `ClamAVUI*.exe`, `clamav/`, `settings.ini`,
+  `scans.log`, `quarantine/` must never appear in a PR.
+
+## Review tone
+
+Prefer a few high-confidence findings over volume. Skip style nitpicks that
+conflict with the constraints above.

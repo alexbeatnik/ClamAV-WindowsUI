@@ -55,6 +55,11 @@ namespace ClamAVUI
         Timer autoUpdateTimer;
         bool autoUpdateFirstTick = true;
 
+        // Scheduled quick scan: 0 = off, 1 = daily, 2 = weekly (the default)
+        int schedMode = 2;
+        DateTime lastScheduledScan; // when the last scheduled quick scan started (persisted)
+        Timer schedTimer;           // periodically checks whether a scheduled scan is due
+
         // Exclusions: paths that are not scanned
         readonly List<string> exclusions = new List<string>();
 
@@ -91,9 +96,11 @@ namespace ClamAVUI
         ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp, btnAbout;
         ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
         Label perfLabel, perfHint;
+        ModernButton btnSchedOff, btnSchedDaily, btnSchedWeekly;
+        Label schedLabel;
         Label installedBadge;                  // green "✓ Installed to Program Files" badge
         Label setStatusHeader;                 // STATUS block on the settings page
-        Label[] setStatusCaps, setStatusVals;  // engine / database / monitoring / quarantine
+        Label[] setStatusCaps, setStatusVals;  // engine / database / monitoring / quarantine / scheduler
         ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
         ListView quarList;
         StatStrip quarStrip;          // files / total size / last detection above the list

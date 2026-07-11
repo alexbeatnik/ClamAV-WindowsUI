@@ -195,6 +195,14 @@ namespace ClamAVUI
                     else if (t == "logdetails=1") logDetails = true;
                     else if (t == "perf=low") perfMode = 0;
                     else if (t == "perf=high") perfMode = 2;
+                    else if (t == "sched=off") schedMode = 0;
+                    else if (t == "sched=daily") schedMode = 1; // weekly is the field default
+                    else if (t.StartsWith("lastsched="))
+                    {
+                        long ticks;
+                        if (long.TryParse(t.Substring(10), out ticks) && ticks > 0)
+                            lastScheduledScan = new DateTime(ticks);
+                    }
                     else if (t == "autostartinit=1") autostartInitialized = true;
                     else if (t == "modeasked=1") { modeAsked = true; modeAskedSeen = true; }
                     else if (t == "modeasked=0") modeAskedSeen = true;
@@ -234,6 +242,10 @@ namespace ClamAVUI
             // Pre-0.0.6 settings have no modeasked flag: that setup already exists and
             // works — don't spring the first-run mode question on an existing user
             if (hadSettings && !modeAskedSeen) modeAsked = true;
+            // Scheduler anchor: on a fresh install (or an upgrade from a version
+            // without the scheduler) count from "now", so the first automatic scan
+            // happens one full period from today instead of right at startup
+            if (lastScheduledScan == DateTime.MinValue) lastScheduledScan = DateTime.Now;
             // First run: add default folders (Downloads, Desktop, Program Files) and
             // enable monitoring right away. Done only once — if the user changes it
             // afterwards, we don't force it back on.
@@ -273,7 +285,8 @@ namespace ClamAVUI
             chkFullRisky.Checked = fullRisky;
             chkUsbPrompt.Checked = usbPrompt;
             chkLogDetails.Checked = logDetails;
-            UpdatePerfButtons(); // reflect the loaded perf mode
+            UpdatePerfButtons();  // reflect the loaded perf mode
+            UpdateSchedButtons(); // reflect the loaded schedule
             chkMonitor.Checked = monitor; // CheckedChanged will start the watchers itself
             loadingSettings = false;
             ApplyLanguage(); // picks up the loaded language setting and re-texts the UI
@@ -327,6 +340,8 @@ namespace ClamAVUI
             sb.AppendLine("usbprompt=" + (chkUsbPrompt.Checked ? "1" : "0"));
             sb.AppendLine("logdetails=" + (chkLogDetails.Checked ? "1" : "0"));
             sb.AppendLine("perf=" + (perfMode == 0 ? "low" : perfMode == 2 ? "high" : "normal"));
+            sb.AppendLine("sched=" + (schedMode == 0 ? "off" : schedMode == 1 ? "daily" : "weekly"));
+            sb.AppendLine("lastsched=" + lastScheduledScan.Ticks);
             sb.AppendLine("autostartinit=" + (autostartInitialized ? "1" : "0"));
             sb.AppendLine("modeasked=" + (modeAsked ? "1" : "0"));
             sb.AppendLine("watchinit=" + (watchInitialized ? "3" : "0"));

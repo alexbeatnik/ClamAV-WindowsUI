@@ -252,6 +252,35 @@ namespace ClamAVUI
         DateTime lastDbCheck;  // time of the last daily check (persisted)
         bool updateAvailable;  // the server has a newer database — show the update button
 
+        // ---------- Scheduled quick scan ----------
+
+        // Timer-driven: when the configured period (a day / a week) has passed since
+        // the last scheduled run, a normal quick scan starts on its own. A PC that was
+        // off past the due time catches up a few minutes after the next start. Skipped
+        // while anything else runs, and while a modal dialog is open — starting a scan
+        // would ClearLog() and reset foundFiles under the threat dialog.
+        void MaybeRunScheduledScan()
+        {
+            if (!ScheduledScanDue(schedMode, lastScheduledScan, DateTime.Now)) return;
+            if (scanRunning || updateRunning || startingEngine || clamDir == null || !DbExists()) return;
+            if (!NativeMethods.IsWindowEnabled(Handle)) return; // a dialog is open — retry on a later tick
+            RunQuickScan();
+            if (!scanRunning) return; // didn't start — stays due, retried on the next tick
+            lastScheduledScan = DateTime.Now;
+            SaveSettings();
+            AppendLog(Lang.T("log.scheduledScanStart"), Theme.Muted);
+            tray.ShowBalloonTip(4000, AppName, Lang.T("tray.scheduledScan"), ToolTipIcon.Info);
+        }
+
+        // Pure due-time rule (unit-tested). mode: 0 = off, 1 = daily, 2 = weekly.
+        // A never-anchored MinValue counts as long overdue; a last-run in the future
+        // (clock set back) is NOT due — it self-heals once real time catches up.
+        internal static bool ScheduledScanDue(int mode, DateTime last, DateTime now)
+        {
+            if (mode != 1 && mode != 2) return false;
+            return (now - last).TotalHours >= (mode == 1 ? 24 : 168);
+        }
+
         // Quotes a command-line argument; a trailing \ before the quote must be doubled
         internal static string Quote(string path)
         {
@@ -268,13 +297,18 @@ namespace ClamAVUI
             var sb = new StringBuilder();
             foreach (string d in all)
             {
-                // (\\|$): matches only the path itself or what's inside it,
-                // otherwise ^C:\...\quarantine would also match C:\...\quarantine2
-                string rx = "(?i)^" + Regex.Escape(d.TrimEnd('\\')) + "(\\\\|$)";
+                string rx = ExcludePathRegex(d);
                 sb.Append(" --exclude-dir=\"").Append(rx).Append("\"");
                 sb.Append(" --exclude=\"").Append(rx).Append("\"");
             }
             return sb.ToString();
+        }
+
+        // (\\|$): matches only the path itself or what's inside it,
+        // otherwise ^C:\...\quarantine would also match C:\...\quarantine2
+        internal static string ExcludePathRegex(string dir)
+        {
+            return "(?i)^" + Regex.Escape(dir.TrimEnd('\\')) + "(\\\\|$)";
         }
 
         // True if path is root itself or lies inside it. A plain StartsWith would not
@@ -364,10 +398,7 @@ namespace ClamAVUI
                 if (string.IsNullOrEmpty(p)) return;
                 try { p = Path.GetFullPath(p); } catch { return; }
                 if (!Directory.Exists(p)) return;
-                foreach (string e in list)
-                    if (IsUnder(p, e)) return; // already covered by a broader root
-                list.RemoveAll(delegate(string e) { return IsUnder(e, p); });
-                list.Add(p);
+                MergeScanRoot(list, p);
             };
             add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
             add(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
@@ -381,6 +412,16 @@ namespace ClamAVUI
             add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             add(Environment.GetEnvironmentVariable("PUBLIC"));
             return list;
+        }
+
+        // Adds a scan root unless a broader root already covers it, and drops any
+        // narrower roots the new one covers — each location ends up scanned once
+        internal static void MergeScanRoot(List<string> list, string path)
+        {
+            foreach (string e in list)
+                if (IsUnder(path, e)) return;
+            list.RemoveAll(delegate(string e) { return IsUnder(e, path); });
+            list.Add(path);
         }
 
         // Paths of running processes' executables — checks what's currently running
