@@ -54,6 +54,15 @@ namespace ClamAVUI
             }
         }
 
+        // Recreates the parent folder of a path about to be written (no-op when it
+        // already exists) — quarantine restores must work even after the user has
+        // deleted the folder the file originally lived in.
+        internal static void EnsureParentDir(string path)
+        {
+            string dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        }
+
         // A free "name.quar" (or "name(2).quar") slot inside the quarantine folder
         internal static string UniqueQuarPath(string dir, string originalName)
         {

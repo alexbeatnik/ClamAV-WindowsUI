@@ -44,7 +44,7 @@ namespace ClamAVUI
             }
 
             // The first normal start decides where the app lives (portable vs
-            // Program Files) BEFORE anything is downloaded, so ClamAV, the database
+            // per-user install) BEFORE anything is downloaded, so ClamAV, the database
             // and quarantine land in the right place. After that, a clean PC gets
             // the ClamAV download offer as before.
             Shown += delegate
@@ -55,10 +55,10 @@ namespace ClamAVUI
                     modeAsked = true; // one-time question, even if UAC is declined later
                     SaveSettings();
                     if (MessageBox.Show(this,
-                        string.Format(Lang.T("msg.firstRunModeChoice"), AppDomain.CurrentDomain.BaseDirectory),
+                        string.Format(Lang.T("msg.firstRunModeChoice"), AppDomain.CurrentDomain.BaseDirectory, InstallDir),
                         AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     {
-                        LaunchInstaller(); // copies everything to Program Files and relaunches from there
+                        LaunchInstaller(); // copies everything to the per-user folder and relaunches from there
                         return;
                     }
                     // portable mode: the current folder stays the root for ClamAV,
@@ -805,6 +805,9 @@ namespace ClamAVUI
                         MessageBox.Show(this, string.Format(Lang.T("msg.fileExists"), row.Origin), Lang.T("quarantine.title"));
                         continue;
                     }
+                    // the original folder may have been deleted or renamed since
+                    // quarantining — recreate it so the restore doesn't dead-end
+                    EnsureParentDir(row.Origin);
                     if (row.Path.EndsWith(QuarExt, StringComparison.OrdinalIgnoreCase))
                     {
                         // neutralized file: XOR back into the original bytes at the origin path
@@ -881,21 +884,26 @@ namespace ClamAVUI
             chkUsbPrompt.Checked = true;
             chkUsbPrompt.CheckedChanged += delegate { SaveSettings(); };
 
+            // informational tray balloons; threat alerts bypass this (see Notify)
+            chkNotify = MakeCheck(Lang.T("settings.notifications"), 20, 308);
+            chkNotify.Checked = true;
+            chkNotify.CheckedChanged += delegate { SaveSettings(); };
+
             langLabel = new Label();
             langLabel.Text = Lang.T("settings.language");
             langLabel.AutoSize = true;
             langLabel.ForeColor = Theme.Text;
             langLabel.BackColor = Theme.Card;
-            langLabel.Location = new Point(20, 322);
+            langLabel.Location = new Point(20, 358);
             btnLangEn = MakeButton("English", 90, Theme.Btn, Theme.BtnHot);
             btnLangEn.TextColor = Theme.BtnText;
             btnLangEn.BackColor = Theme.Card;
-            btnLangEn.SetBounds(180, 316, 90, 30);
+            btnLangEn.SetBounds(180, 352, 90, 30);
             btnLangEn.Click += delegate { SetLanguage(Lang.Language.English); };
             btnLangUk = MakeButton("Українська", 110, Theme.Btn, Theme.BtnHot);
             btnLangUk.TextColor = Theme.BtnText;
             btnLangUk.BackColor = Theme.Card;
-            btnLangUk.SetBounds(276, 316, 110, 30);
+            btnLangUk.SetBounds(276, 352, 110, 30);
             btnLangUk.Click += delegate { SetLanguage(Lang.Language.Ukrainian); };
             UpdateLangButtons();
 
@@ -982,7 +990,7 @@ namespace ClamAVUI
 
             btnInstall = MakeLightButton(Lang.T("btn.installPF"), Ico.Download);
             btnInstall.BackColor = Theme.Card;
-            btnInstall.SetBounds(20, 362, 290, 30);
+            btnInstall.SetBounds(20, 398, 290, 30);
             btnInstall.Visible = !IsInstalled;
             btnInstall.Click += delegate
             {
@@ -999,7 +1007,7 @@ namespace ClamAVUI
             installedBadge.ForeColor = Theme.Good;
             installedBadge.BackColor = Theme.Card;
             installedBadge.AutoSize = true;
-            installedBadge.Location = new Point(20, 368);
+            installedBadge.Location = new Point(20, 404);
             installedBadge.Visible = IsInstalled;
             cardSettingsPanel.Controls.Add(installedBadge);
 
@@ -1007,7 +1015,7 @@ namespace ClamAVUI
             // (via this button, or automatically after --install elevates and fixes it).
             btnFixWinTemp = MakeLightButton(Lang.T("btn.fixWinTemp"), Ico.Unlock);
             btnFixWinTemp.BackColor = Theme.Card;
-            btnFixWinTemp.SetBounds(20, 400, 290, 30);
+            btnFixWinTemp.SetBounds(20, 436, 290, 30);
             btnFixWinTemp.Visible = !CanWatchDirectory(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             btnFixWinTemp.Click += delegate { FixWinTempAccess(); };
@@ -1015,7 +1023,7 @@ namespace ClamAVUI
             // About: description, quick-start steps, and project links (star / releases / follow)
             btnAbout = MakeLightButton(Lang.T("btn.about"), Ico.Info);
             btnAbout.BackColor = Theme.Card;
-            btnAbout.SetBounds(20, 438, 290, 30);
+            btnAbout.SetBounds(20, 474, 290, 30);
             btnAbout.Click += delegate { ShowAboutDialog(); };
 
             cardSettingsPanel.Controls.Add(chkMonitor);
@@ -1026,6 +1034,7 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(chkFullRisky);
             cardSettingsPanel.Controls.Add(chkAutostart);
             cardSettingsPanel.Controls.Add(chkUsbPrompt);
+            cardSettingsPanel.Controls.Add(chkNotify);
             cardSettingsPanel.Controls.Add(langLabel);
             cardSettingsPanel.Controls.Add(btnLangEn);
             cardSettingsPanel.Controls.Add(btnLangUk);
@@ -1435,6 +1444,7 @@ namespace ClamAVUI
             chkFullRisky.Text = Lang.T("settings.fullRisky");
             chkAutostart.Text = Lang.T("settings.autostart");
             chkUsbPrompt.Text = Lang.T("settings.usbPrompt");
+            chkNotify.Text = Lang.T("settings.notifications");
             UpdateMonitorLabel();
             langLabel.Text = Lang.T("settings.language");
             UpdateLangButtons();
@@ -1464,6 +1474,15 @@ namespace ClamAVUI
             if (m.Msg == WmShow && WmShow != 0) RestoreFromTray();
             if (m.Msg == WM_DEVICECHANGE) HandleDeviceChange(ref m); // USB drive plugged in
             base.WndProc(ref m);
+        }
+
+        // Informational tray balloon, gated by the notifications toggle. Threat
+        // alerts don't go through here — they call tray.ShowBalloonTip directly
+        // and are always shown.
+        void Notify(int ms, string text, ToolTipIcon icon)
+        {
+            if (chkNotify != null && !chkNotify.Checked) return;
+            tray.ShowBalloonTip(ms, AppName, text, icon);
         }
 
         void RestoreFromTray()

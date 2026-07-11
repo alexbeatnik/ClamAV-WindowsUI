@@ -307,9 +307,10 @@ namespace ClamAVUI
         void QueueNewFile(string path)
         {
             // FileSystemWatcher can raise on a worker thread when the form handle isn't
-            // created yet (SynchronizingObject is a no-op then) — marshal to the UI thread
-            // before touching pendingFiles/debounceTimer
-            if (InvokeRequired)
+            // created yet (SynchronizingObject is a no-op then, and InvokeRequired is
+            // false without a handle) — marshal to the UI thread before touching
+            // pendingFiles/debounceTimer; pre-handle events are dropped by the catch
+            if (!IsHandleCreated || InvokeRequired)
             {
                 try { BeginInvoke((Action<string>)QueueNewFile, path); } catch { }
                 return;

@@ -38,9 +38,10 @@ must not be "modernized" in suggestions or review comments:
   `BeginInvoke` wrapped in `try/catch` (the form may already be closed);
   child `Process` objects set `SynchronizingObject = this`; no UI-thread
   blocking waits on child processes.
-- **Elevation**: the main app must never require admin. Anything elevated
-  goes through the separate `--install`/`--uninstall`/`--fix-wintemp`
-  relaunch paths (`src/MainForm.Install.cs`).
+- **Elevation**: the main app must never require admin. Install and
+  self-update are per-user and unelevated; only `--fix-wintemp` and the
+  legacy Program Files `--uninstall` elevate, via separate relaunch paths
+  (`src/MainForm.Install.cs`).
 - **Tests**: new pure logic should be an `internal static` member of
   `MainForm` with a test in `tests/` (zero-dependency runner; classes named
   `*Tests`, methods `Test*`). CI runs `build.ps1` + `test.ps1` on every PR.

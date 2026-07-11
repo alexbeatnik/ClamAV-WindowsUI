@@ -37,7 +37,7 @@ namespace ClamAVUI
         bool monitorScan;    // true if the current scan was triggered by the monitor, not the user
         bool reallyClose;    // true = exit, false = minimize to tray
         bool autostartInitialized; // whether autostart was already auto-enabled on first run
-        bool modeAsked;            // first-run "portable vs Program Files" question already answered
+        bool modeAsked;            // first-run "portable vs installed" question already answered
         int perfMode = 1;    // scan performance: 0 = low, 1 = normal, 2 = high (see Perf* helpers)
 
         // Progress: total file count (computed in the background), generation to cancel counting
@@ -98,7 +98,7 @@ namespace ClamAVUI
         Label perfLabel, perfHint;
         ModernButton btnSchedOff, btnSchedDaily, btnSchedWeekly;
         Label schedLabel;
-        Label installedBadge;                  // green "✓ Installed to Program Files" badge
+        Label installedBadge;                  // green "✓ Installed" badge
         Label setStatusHeader;                 // STATUS block on the settings page
         Label[] setStatusCaps, setStatusVals;  // engine / database / monitoring / quarantine / scheduler
         ModernButton btnQuarDelete, btnQuarRestore, btnQuarToExcl, btnQuarOpenFolder, btnQuarExclusions;
@@ -115,6 +115,7 @@ namespace ClamAVUI
         Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, scanProgressLabel;
         ShieldIndicator shield;
         Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt, chkLogDetails;
+        Toggle chkNotify; // tray notifications; threat alerts are shown regardless (see Notify)
         SlimMarquee progress;
         NotifyIcon tray;
         ToolStripItem trayOpenItem, trayExitItem;

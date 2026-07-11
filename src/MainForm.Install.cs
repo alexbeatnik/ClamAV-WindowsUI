@@ -1,4 +1,5 @@
-// Install to Program Files, uninstall, C:\Windows\Temp ACL fix, shortcuts.
+// Per-user install/uninstall (%LocalAppData%\Programs), legacy Program Files
+// uninstall, C:\Windows\Temp ACL fix, shortcuts.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,17 +18,37 @@ namespace ClamAVUI
 {
     public partial class MainForm : Form
     {
-        // ---------- Install to Program Files ----------
+        // ---------- Install (per-user, no admin rights) ----------
 
+        // %LocalAppData%\Programs\ClamAV UI — writable by the owning user only.
+        // Binaries can't be tampered with by other local users, and installing
+        // and self-updating need no admin rights or UAC prompts. (Pre-0.0.8
+        // installs went to Program Files and granted Users:Modify on the whole
+        // tree, exe included — that model is retired.)
         static string InstallDir
+        {
+            get
+            {
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    @"Programs\ClamAV UI");
+            }
+        }
+
+        // Where pre-0.0.8 versions installed. Still recognized so an existing
+        // setup keeps behaving as installed; --uninstall from there elevates.
+        static string LegacyInstallDir
         {
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ClamAV UI"); }
         }
 
         static bool IsInstalled
         {
-            // IsUnder, not StartsWith: "C:\Program Files\ClamAV UI Beta" must not count
-            get { return IsUnder(Application.ExecutablePath, InstallDir); }
+            // IsUnder, not StartsWith: "...\ClamAV UI Beta" must not count
+            get
+            {
+                return IsUnder(Application.ExecutablePath, InstallDir)
+                    || IsUnder(Application.ExecutablePath, LegacyInstallDir);
+            }
         }
 
         static bool IsAdmin()
@@ -38,20 +59,6 @@ namespace ClamAVUI
 
         static void RunInstallMode()
         {
-            if (!IsAdmin())
-            {
-                // relaunch ourselves with administrator rights
-                try
-                {
-                    var psi = new ProcessStartInfo(Application.ExecutablePath, "--install");
-                    psi.UseShellExecute = true;
-                    psi.Verb = "runas";
-                    Process.Start(psi);
-                }
-                catch { } // user declined the UAC prompt
-                return;
-            }
-
             var f = new Form();
             f.Text = Lang.T("install.title");
             f.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -83,8 +90,7 @@ namespace ClamAVUI
                                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                             else
                             {
-                                // launch the installed copy WITHOUT administrator rights (via explorer)
-                                try { Process.Start("explorer.exe", "\"" + Path.Combine(InstallDir, "ClamAVUI.exe") + "\""); }
+                                try { Process.Start(Path.Combine(InstallDir, "ClamAVUI.exe")); }
                                 catch { }
                             }
                             Application.ExitThread();
@@ -98,17 +104,14 @@ namespace ClamAVUI
 
         static void DoInstall()
         {
+            // the instance that launched --install is still shutting down and holds
+            // the single-instance mutex — give it a moment, otherwise the installed
+            // copy started below would just signal it and exit
+            System.Threading.Thread.Sleep(1500);
+
             string srcDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
             string dst = InstallDir;
             Directory.CreateDirectory(dst);
-
-            // Grant Users write access so the DB/quarantine/settings can update without admin rights
-            RunHidden("icacls", "\"" + dst + "\" /grant *S-1-5-32-545:(OI)(CI)M /T");
-
-            // While we're elevated anyway, also restore the default Windows read
-            // permission on C:\Windows\Temp if something hardened it away — lets the
-            // (always non-elevated) app monitor it too. See FixWinTempAcl for details.
-            FixWinTempAcl();
 
             string dstExe = Path.Combine(dst, "ClamAVUI.exe");
             if (!string.Equals(Application.ExecutablePath, dstExe, StringComparison.OrdinalIgnoreCase))
@@ -130,14 +133,14 @@ namespace ClamAVUI
                 }
             }
 
-            // shortcuts: Start Menu (all users) and Desktop
+            // shortcuts: Start Menu and Desktop (both per-user)
             CreateShortcut(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), "ClamAV UI.lnk"), dstExe, dst);
+                Environment.GetFolderPath(Environment.SpecialFolder.Programs), "ClamAV UI.lnk"), dstExe, dst);
             CreateShortcut(Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "ClamAV UI.lnk"), dstExe, dst);
 
-            // register in "Programs and Features" (Apps)
-            using (var k = Registry.LocalMachine.CreateSubKey(
+            // register in "Apps" (per-user entry)
+            using (var k = Registry.CurrentUser.CreateSubKey(
                 @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ClamAVUI"))
             {
                 k.SetValue("DisplayName", "ClamAV UI");
@@ -159,7 +162,13 @@ namespace ClamAVUI
 
         static void RunUninstallMode()
         {
-            if (!IsAdmin())
+            // Uninstall removes EVERY trace: the per-user install and, if present,
+            // a pre-0.0.8 copy in Program Files (leftover after a migration, or
+            // the copy we're running from). Touching Program Files — its folder,
+            // the HKLM entry, the all-users shortcut — needs admin; a per-user
+            // copy alone does not, so elevation is requested only when needed.
+            bool legacy = Directory.Exists(LegacyInstallDir);
+            if (legacy && !IsAdmin())
             {
                 try
                 {
@@ -168,7 +177,7 @@ namespace ClamAVUI
                     psi.Verb = "runas";
                     Process.Start(psi);
                 }
-                catch { }
+                catch { } // user declined the UAC prompt
                 return;
             }
             if (MessageBox.Show(
@@ -176,21 +185,30 @@ namespace ClamAVUI
                 AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             try
             {
-                TryDelete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), "ClamAV UI.lnk"));
+                if (legacy)
+                {
+                    TryDelete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), "ClamAV UI.lnk"));
+                    Registry.LocalMachine.DeleteSubKeyTree(
+                        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ClamAVUI", false);
+                }
+                TryDelete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "ClamAV UI.lnk"));
                 TryDelete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "ClamAV UI.lnk"));
-                Registry.LocalMachine.DeleteSubKeyTree(
+                Registry.CurrentUser.DeleteSubKeyTree(
                     @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ClamAVUI", false);
                 using (var k = Registry.CurrentUser.OpenSubKey(RunKeyPath, true))
                     if (k != null) k.DeleteValue(RunValueName, false);
                 MessageBox.Show(Lang.T("uninstall.done"), AppName);
-                // The folder itself is removed after exit, since our exe is still running.
-                // We launch this AFTER the MessageBox: otherwise rd runs while the window
-                // is still open and can't delete the locked exe.
-                var psi = new ProcessStartInfo("cmd.exe",
-                    "/c timeout /t 3 /nobreak >nul & rd /s /q \"" + InstallDir + "\"");
-                psi.CreateNoWindow = true;
-                psi.UseShellExecute = false;
-                Process.Start(psi);
+                // The folders themselves are removed after exit, since our exe is still
+                // running from one of them. Launched AFTER the MessageBox: otherwise rd
+                // runs while the window is still open and can't delete the locked exe.
+                // rd on a folder that doesn't exist is a harmless no-op.
+                string sweep = "rd /s /q \"" + InstallDir + "\"";
+                if (legacy) sweep += " & rd /s /q \"" + LegacyInstallDir + "\"";
+                var rm = new ProcessStartInfo("cmd.exe",
+                    "/c timeout /t 3 /nobreak >nul & " + sweep);
+                rm.CreateNoWindow = true;
+                rm.UseShellExecute = false;
+                Process.Start(rm);
             }
             catch (Exception ex)
             {

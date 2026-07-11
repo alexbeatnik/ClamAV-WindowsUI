@@ -17,9 +17,11 @@ Build first (`.\build.ps1`), then launch `.\ClamAVUI.exe`.
 - `--tray` starts minimized to the tray (this is what autostart uses).
 - A portable ClamAV lives in `clamav/` next to the exe (gitignored,
   ~220 MB); without it most scan paths are disabled but the UI still runs.
-- First run without `settings.ini` asks the portable-vs-Program-Files
-  question. To test upgrade behavior, keep the existing `settings.ini`; to
-  test first-run behavior, move it aside temporarily (it's gitignored).
+- First run without `settings.ini` asks the portable-vs-install question
+  (per-user install to `%LocalAppData%\Programs\ClamAV UI`, no UAC). To test
+  upgrade behavior, keep the existing `settings.ini`; to test first-run
+  behavior, move it aside temporarily (it's gitignored). Careful: answering
+  YES actually installs and relaunches from the per-user folder.
 
 ## What to check after UI changes
 

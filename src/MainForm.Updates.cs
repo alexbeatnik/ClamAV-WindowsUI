@@ -60,8 +60,8 @@ namespace ClamAVUI
                     if (new Version(vm.Groups[1].Value) > new Version(AppVersion))
                     {
                         version = vm.Groups[1].Value;
-                        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                        string updatePath = Path.Combine(baseDir, "ClamAVUI.update.exe");
+                        // %TEMP% is always writable, wherever the app itself lives
+                        string updatePath = Path.Combine(Path.GetTempPath(), "ClamAVUI.update.exe");
                         TryDelete(updatePath); // leftover from an earlier interrupted attempt
                         using (var wc = new System.Net.WebClient())
                         {
@@ -104,8 +104,7 @@ namespace ClamAVUI
         {
             try
             {
-                tray.ShowBalloonTip(4000, AppName,
-                    string.Format(Lang.T("tray.appUpdateInstalling"), version), ToolTipIcon.Info);
+                Notify(4000, string.Format(Lang.T("tray.appUpdateInstalling"), version), ToolTipIcon.Info);
             }
             catch { }
             string exePath = Application.ExecutablePath;
@@ -154,14 +153,12 @@ namespace ClamAVUI
         {
             try
             {
-                var psi = new ProcessStartInfo(Application.ExecutablePath, "--install");
-                psi.UseShellExecute = true;
-                psi.Verb = "runas"; // UAC
-                Process.Start(psi);
+                // per-user install (%LocalAppData%\Programs) — no elevation needed
+                Process.Start(Application.ExecutablePath, "--install");
                 reallyClose = true;
                 Close(); // the installed copy will launch itself after copying
             }
-            catch // user declined the UAC prompt
+            catch
             {
                 statusLabel.Text = Lang.T("status.installCancelled");
             }
@@ -375,6 +372,10 @@ namespace ClamAVUI
                         DownloadCvd(url, dest, name);
                         updated++;
                     }
+                    else
+                        // the server responded but the header isn't a CVD — surface an
+                        // error instead of silently reporting "already up to date"
+                        throw new Exception(string.Format(Lang.T("err.versionCheckFailed"), name));
                 }
             }
             catch (Exception ex)
@@ -564,8 +565,7 @@ namespace ClamAVUI
                     TryDelete(part);
                     throw new Exception(string.Format(Lang.T("err.notADatabaseFile"), name));
                 }
-                if (File.Exists(dest)) File.Delete(dest);
-                File.Move(part, dest);
+                PromoteDownloadedFile(part, dest);
                 UiLog(string.Format(Lang.T("log.dbFileDownloaded"), name), Theme.Good);
             }
             catch
@@ -573,6 +573,17 @@ namespace ClamAVUI
                 TryDelete(part);
                 throw;
             }
+        }
+
+        // Promotes a fully downloaded .part file to the live database file.
+        // Replace, not Delete+Move: a failure between those two would leave no
+        // working database at all. File.Replace (Win32 ReplaceFile) swaps in
+        // place — at every moment either the old or the new file exists at dest.
+        // The null backup argument is valid on .NET Framework: no backup is kept.
+        internal static void PromoteDownloadedFile(string part, string dest)
+        {
+            if (File.Exists(dest)) File.Replace(part, dest, null);
+            else File.Move(part, dest);
         }
 
         // Thread-safe logging from a background thread

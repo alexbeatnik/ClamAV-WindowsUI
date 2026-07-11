@@ -41,7 +41,7 @@ namespace ClamAVUI
         {
             // Install / uninstall
             A("install.title", "ClamAV UI — Setup", "ClamAV UI — встановлення");
-            A("install.installing", "Installing ClamAV UI to Program Files…", "Встановлюю ClamAV UI у Program Files…");
+            A("install.installing", "Installing ClamAV UI…", "Встановлюю ClamAV UI…");
             A("install.failed", "Installation failed:\r\n", "Не вдалося встановити:\r\n");
             A("uninstall.confirm", "Remove ClamAV UI along with ClamAV, the signature database and quarantine?", "Видалити ClamAV UI разом із ClamAV, базами сигнатур і карантином?");
             A("uninstall.done", "ClamAV UI has been removed.", "ClamAV UI видалено.");
@@ -112,8 +112,8 @@ namespace ClamAVUI
             A("prop.size", "Size", "Розмір");
             A("btn.copyHash", "COPY HASH", "КОПІЮВАТИ ХЕШ");
             A("status.hashCopied", "SHA256 copied to clipboard.", "SHA256 скопійовано в буфер обміну.");
-            A("btn.installedPF", "INSTALLED TO PROGRAM FILES", "ВСТАНОВЛЕНО В PROGRAM FILES");
-            A("btn.installPF", "INSTALL TO PROGRAM FILES", "ВСТАНОВИТИ В PROGRAM FILES");
+            A("btn.installedPF", "INSTALLED", "ВСТАНОВЛЕНО");
+            A("btn.installPF", "INSTALL FOR THIS USER", "ВСТАНОВИТИ ДЛЯ КОРИСТУВАЧА");
             A("btn.fixWinTemp", "FIX C:\\WINDOWS\\TEMP ACCESS", "ВІДНОВИТИ ДОСТУП ДО C:\\WINDOWS\\TEMP");
             A("btn.close", "Close", "Закрити");
             A("btn.toExclusions", "To exclusions", "У виключення");
@@ -138,6 +138,7 @@ namespace ClamAVUI
             A("settings.autostart", "Start with Windows (in tray)", "Запускати разом з Windows (у треї)");
             A("settings.language", "Interface language:", "Мова інтерфейсу:");
             A("settings.usbPrompt", "Offer to scan USB drives when connected", "Пропонувати перевірку USB-накопичувачів при підключенні");
+            A("settings.notifications", "Tray notifications (threat alerts are always shown)", "Сповіщення в треї (про знайдені загрози — завжди)");
             A("settings.status", "Status", "Стан");
             A("sstat.engine", "Engine", "Рушій");
             A("sstat.database", "Database", "Бази");
@@ -148,7 +149,7 @@ namespace ClamAVUI
             A("sval.enabled", "Enabled", "Увімкнено");
             A("sval.disabled", "Disabled", "Вимкнено");
             A("sval.filesN", "{0} files", "Файлів: {0}");
-            A("badge.installedPF", "Installed to Program Files", "Встановлено в Program Files");
+            A("badge.installedPF", "Installed", "Встановлено");
             A("settings.performance", "Scan performance:", "Продуктивність сканування:");
             A("settings.perfHint", "Low — quieter PC, slower scans. High — fastest, loads the CPU.",
                 "Низька — тихіше для ПК, повільніше. Висока — найшвидше, навантажує процесор.");
@@ -174,8 +175,8 @@ namespace ClamAVUI
                 "Підключено новий накопичувач: {0}\r\n\r\nПеревірити його на загрози зараз?");
             A("tray.usbBusy", "Drive {0} connected. A scan is already running — you can check it later from the dashboard.",
                 "Підключено диск {0}. Сканування вже триває — перевірити його можна пізніше з панелі.");
-            A("msg.installConfirm", "The app will be copied to {0} together with ClamAV and the database,\r\nStart Menu/Desktop shortcuts will be created, and it will be registered in \"Apps\".\r\nAdministrator rights are required. Continue?",
-                "Програма скопіюється в {0} разом із ClamAV і базами,\r\nз'являться ярлики в Пуску, на робочому столі та запис у «Програмах».\r\nПотрібні права адміністратора. Продовжити?");
+            A("msg.installConfirm", "The app will be copied to\r\n{0}\r\ntogether with ClamAV and the database, Start Menu/Desktop shortcuts will be created,\r\nand it will be registered in \"Apps\". No administrator rights are needed. Continue?",
+                "Програма скопіюється в\r\n{0}\r\nразом із ClamAV і базами, з'являться ярлики в Пуску, на робочому столі\r\nта запис у «Програмах». Права адміністратора не потрібні. Продовжити?");
             A("msg.fixWinTempConfirm", "On this PC, C:\\Windows\\Temp is locked down so even reading its contents is denied "
                 + "to regular apps — a common malware drop point can't be monitored as a result.\r\n\r\n"
                 + "This will restore the default Windows read permission on that one folder only "
@@ -228,7 +229,8 @@ namespace ClamAVUI
             A("status.monitorOn", "Monitoring enabled: new files will be checked automatically.", "Моніторинг увімкнено: нові файли перевірятимуться автоматично.");
             A("status.monitorOff", "Monitoring disabled.", "Моніторинг вимкнено.");
             A("log.watchFailed", "Failed to watch {0}: {1}\r\n", "Не вдалося стежити за {0}: {1}\r\n");
-            A("log.watchingFolders", "Monitoring: {0} folder(s).\r\n", "Моніторинг: {0} папок.\r\n");
+            // count comes after the colon so Ukrainian needs no plural declension
+            A("log.watchingFolders", "Monitoring: {0} folder(s).\r\n", "Папок у моніторингу: {0}.\r\n");
 
             // Scanning: pickers and generic
             A("dlg.pickFolder", "Choose a folder to scan", "Вибери папку для сканування");
@@ -323,27 +325,27 @@ namespace ClamAVUI
 
             // Install / download ClamAV
             A("msg.firstRunModeChoice", "Welcome! How do you want to use ClamAV UI?\r\n\r\n"
-                + "YES — install to Program Files (recommended): the app copies itself there together\r\n"
-                + "with everything it downloads, adds Start Menu/Desktop shortcuts and an \"Apps\" entry.\r\n"
-                + "Administrator rights are needed once.\r\n\r\n"
+                + "YES — install for this user (recommended): the app copies itself to\r\n{1}\r\n"
+                + "together with everything it downloads, adds Start Menu/Desktop shortcuts and an\r\n"
+                + "\"Apps\" entry. No administrator rights are needed.\r\n\r\n"
                 + "NO — portable mode: everything (ClamAV, signature database, quarantine, settings)\r\n"
                 + "stays in the current folder:\r\n{0}",
                 "Вітаю! Як використовувати ClamAV UI?\r\n\r\n"
-                + "ТАК — встановити в Program Files (рекомендовано): програма скопіюється туди разом\r\n"
-                + "з усім, що завантажить, додасть ярлики в Пуск, на робочий стіл і запис у «Програмах».\r\n"
-                + "Один раз знадобляться права адміністратора.\r\n\r\n"
+                + "ТАК — встановити для цього користувача (рекомендовано): програма скопіюється в\r\n{1}\r\n"
+                + "разом з усім, що завантажить, додасть ярлики в Пуск, на робочий стіл і запис у\r\n"
+                + "«Програмах». Права адміністратора не потрібні.\r\n\r\n"
                 + "НІ — портативний режим: усе (ClamAV, бази сигнатур, карантин, налаштування)\r\n"
                 + "лишиться в поточній папці:\r\n{0}");
             A("status.installCancelled", "Installation cancelled.", "Встановлення скасовано.");
             A("msg.offerInstallChoice", "ClamAV was not found next to the program. How do you want to set it up?\r\n\r\n"
-                + "YES — install to Program Files: the app copies itself there, downloads ClamAV\r\n"
+                + "YES — install for this user: the app copies itself to its own folder, downloads ClamAV\r\n"
                 + "(~220 MB) and the database, and adds Start Menu/Desktop shortcuts and an \"Apps\" entry.\r\n"
-                + "Administrator rights are required.\r\n\r\n"
+                + "No administrator rights are needed.\r\n\r\n"
                 + "NO — portable mode: download ClamAV into the current folder.",
                 "ClamAV не знайдено поруч з програмою. Як налаштувати?\r\n\r\n"
-                + "ТАК — встановити в Program Files: програма скопіюється туди, скачає ClamAV\r\n"
-                + "(~220 МБ) і бази, додасть ярлики в Пуск, на робочий стіл та в «Програми».\r\n"
-                + "Потрібні права адміністратора.\r\n\r\n"
+                + "ТАК — встановити для цього користувача: програма скопіюється у власну папку, скачає\r\n"
+                + "ClamAV (~220 МБ) і бази, додасть ярлики в Пуск, на робочий стіл та в «Програми».\r\n"
+                + "Права адміністратора не потрібні.\r\n\r\n"
                 + "НІ — портативний режим: скачати ClamAV у поточну папку.");
             A("msg.offerPortableDownload", "ClamAV was not found next to the program.\r\n\r\n"
                 + "Download it automatically from GitHub (~220 MB) and install it into the \"clamav\" folder?\r\n"
@@ -400,6 +402,7 @@ namespace ClamAVUI
             A("status.updateError", "Database update error.", "Помилка оновлення баз.");
             A("log.updateErrorDetail", "\r\nUpdate error: {0}\r\nCheck your internet connection.\r\n", "\r\nПомилка оновлення: {0}\r\nПеревір інтернет-з'єднання.\r\n");
             A("err.notADatabaseFile", "{0}: the downloaded file doesn't look like a ClamAV database", "{0}: завантажений файл не схожий на базу ClamAV");
+            A("err.versionCheckFailed", "{0}: could not read the database version from the server", "{0}: не вдалося прочитати версію бази з сервера");
             A("status.downloadingDb", "Downloading {0}: {1:0} / {2:0} MB ({3:0}%)", "Завантаження {0}: {1:0} / {2:0} МБ ({3:0}%)");
             A("log.dbFileDownloaded", "{0} downloaded ✔\r\n", "{0} завантажено ✔\r\n");
 
@@ -440,13 +443,13 @@ namespace ClamAVUI
                 + "3. Monitoring checks new files in Downloads, Desktop and other folders automatically.\r\n"
                 + "4. Detections land in Quarantine — restore or delete them there.\r\n"
                 + "5. Closing the window minimizes to tray; protection keeps running.\r\n"
-                + "6. Runs portable (everything stays in its own folder) or installed to Program Files — the first start asks once; installing later is one button in Settings.",
+                + "6. Runs portable (everything stays in its own folder) or installed per-user (no admin rights) — the first start asks once; installing later is one button in Settings.",
                 "1. Натисни «ОНОВИТИ БАЗИ» на панелі — перше завантаження ~250 МБ.\r\n"
                 + "2. «ШВИДКИЙ СКАН» за лічені хвилини перевіряє типові місця зараження.\r\n"
                 + "3. Моніторинг автоматично перевіряє нові файли в Downloads, на робочому столі та інших папках.\r\n"
                 + "4. Знахідки потрапляють у Карантин — там їх можна відновити або видалити.\r\n"
                 + "5. Закриття вікна згортає програму в трей; захист продовжує працювати.\r\n"
-                + "6. Працює портативно (усе лежить у власній папці) або встановленою в Program Files — вибір один раз при першому запуску, встановити можна й пізніше з налаштувань.");
+                + "6. Працює портативно (усе лежить у власній папці) або встановленою для користувача (без прав адміністратора) — вибір один раз при першому запуску, встановити можна й пізніше з налаштувань.");
             A("about.star", "★  Star this project on GitHub", "★  Постав зірку проєкту на GitHub");
             A("about.releases", "↓  All releases — download the latest version", "↓  Усі релізи — завантажити найновішу версію");
             A("about.follow", "+  Follow the author on GitHub", "+  Підписатися на автора на GitHub");

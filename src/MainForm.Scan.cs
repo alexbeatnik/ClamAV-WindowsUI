@@ -205,16 +205,17 @@ namespace ClamAVUI
             checkingDb = true;
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
-                bool newer = false;
+                bool newer = false, reachedServer = false;
                 foreach (string url in DbUrls)
                 {
                     string dest = Path.Combine(dbDir, url.Substring(url.LastIndexOf('/') + 1));
                     long local = LocalCvdVersion(dest);
                     long remote = 0;
                     try { remote = RemoteCvdVersion(url); } catch { }
+                    if (remote > 0) reachedServer = true;
                     if (remote > 0 && remote > local) { newer = true; break; }
                 }
-                bool fresh = newer;
+                bool fresh = newer, checkedOk = reachedServer;
                 try
                 {
                     BeginInvoke((Action)delegate
@@ -222,6 +223,10 @@ namespace ClamAVUI
                         checkingDb = false;
                         lastDbCheck = DateTime.Now;
                         SaveSettings();
+                        // the server couldn't be reached (offline / transient failure):
+                        // don't claim "up to date", and don't clear an update flag a
+                        // previous successful check may have set — try again tomorrow
+                        if (!checkedOk) return;
                         updateAvailable = fresh;
                         RefreshDbStatus(); // shows/hides the update button
                         if (!fresh)
@@ -231,8 +236,7 @@ namespace ClamAVUI
                         }
                         if (chkAutoUpdate.Checked)
                         {
-                            tray.ShowBalloonTip(5000, AppName,
-                                Lang.T("tray.dbUpdateDownloading"), ToolTipIcon.Info);
+                            Notify(5000, Lang.T("tray.dbUpdateDownloading"), ToolTipIcon.Info);
                             AppendLog(string.Format(Lang.T("log.dbNewerAutoDownload"), DateTime.Now), Theme.Muted);
                             RunFreshclam(true);
                         }
@@ -240,8 +244,7 @@ namespace ClamAVUI
                         {
                             heroSub.Text = Lang.T("hero.dbUpdateAvailable");
                             statusLabel.Text = Lang.T("status.dbUpdateAvailablePress");
-                            tray.ShowBalloonTip(5000, AppName,
-                                Lang.T("tray.dbUpdateAvailablePress"), ToolTipIcon.Info);
+                            Notify(5000, Lang.T("tray.dbUpdateAvailablePress"), ToolTipIcon.Info);
                         }
                     });
                 }
@@ -269,7 +272,7 @@ namespace ClamAVUI
             lastScheduledScan = DateTime.Now;
             SaveSettings();
             AppendLog(Lang.T("log.scheduledScanStart"), Theme.Muted);
-            tray.ShowBalloonTip(4000, AppName, Lang.T("tray.scheduledScan"), ToolTipIcon.Info);
+            Notify(4000, Lang.T("tray.scheduledScan"), ToolTipIcon.Info);
         }
 
         // Pure due-time rule (unit-tested). mode: 0 = off, 1 = daily, 2 = weekly.
@@ -971,13 +974,12 @@ namespace ClamAVUI
                 if (wasMonitor)
                 {
                     AppendLog(Lang.T("log.newFilesClean"), Theme.Good);
-                    tray.ShowBalloonTip(4000, AppName,
-                        string.Format(Lang.T("tray.newFilesClean"), scannedCount), ToolTipIcon.Info);
+                    Notify(4000, string.Format(Lang.T("tray.newFilesClean"), scannedCount), ToolTipIcon.Info);
                 }
                 else
                 {
                     AppendLog(Lang.T("log.noThreatsFound"), Theme.Good);
-                    tray.ShowBalloonTip(4000, AppName, Lang.T("tray.scanDoneClean"), ToolTipIcon.Info);
+                    Notify(4000, Lang.T("tray.scanDoneClean"), ToolTipIcon.Info);
                 }
             }
             else if (exitCode == 1)

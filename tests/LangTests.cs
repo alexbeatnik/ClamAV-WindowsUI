@@ -46,6 +46,35 @@ namespace ClamAVUI.Tests
             }
         }
 
+        public static void TestV008KeysExistInBothLanguages()
+        {
+            // notifications toggle + DB version-check error added in 0.0.8
+            string[] keys = { "settings.notifications", "err.versionCheckFailed" };
+            foreach (string key in keys)
+            {
+                string en, uk;
+                using (new LangScope(Lang.Language.English)) en = Lang.T(key);
+                using (new LangScope(Lang.Language.Ukrainian)) uk = Lang.T(key);
+                Assert.True(en != key, key + " exists in English");
+                Assert.True(uk != key && uk != en, key + " has its own Ukrainian translation");
+            }
+        }
+
+        public static void TestFirstRunChoiceKeepsBothPlaceholders()
+        {
+            // {0} = the portable folder, {1} = the per-user install dir (added in
+            // 0.0.8) — the call site formats with both arguments in this order
+            foreach (Lang.Language lang in new Lang.Language[] { Lang.Language.English, Lang.Language.Ukrainian })
+                using (new LangScope(lang))
+                {
+                    string s = Lang.T("msg.firstRunModeChoice");
+                    Assert.True(s.Contains("{0}"), "firstRunModeChoice (" + lang + ") keeps {0}");
+                    Assert.True(s.Contains("{1}"), "firstRunModeChoice (" + lang + ") keeps {1}");
+                    Assert.True(Lang.T("msg.installConfirm").Contains("{0}"),
+                        "installConfirm (" + lang + ") keeps {0}");
+                }
+        }
+
         public static void TestFormatPlaceholdersSurviveTranslation()
         {
             // keys used with string.Format must keep their placeholders in both languages

@@ -98,6 +98,9 @@ anytime from Settings — no restart required.
   brings the running instance forward instead (mutex + broadcast message)
 - Tray icon: the close button minimizes to tray, with notifications for
   scan results
+- **Notifications toggle** (Settings): informational tray balloons (scan
+  finished clean, database update available, USB drive busy, self-update…)
+  can be switched off — **threat alerts are always shown** regardless
 - Modern dark theme with icon buttons (custom-drawn vector glyphs, no image
   assets or third-party UI libraries)
 - **Daily database version checks** instead of hammering the server every
@@ -109,12 +112,13 @@ anytime from Settings — no restart required.
 - **Self-updating**: every 4 hours the app also checks this repo's latest
   GitHub Release; if it's newer, it downloads the new `ClamAVUI.exe`,
   shows a tray notification, and swaps itself in on restart — no manual
-  download needed. Works in both portable and installed-to-Program-Files
-  mode (no admin prompt)
-- **Portable or installed — the first run asks**: started outside
-  `Program Files`, the app offers a one-time choice — install to
-  `C:\Program Files\ClamAV UI` (one UAC prompt, shortcuts, an "Apps" entry)
-  or stay portable with the current folder as the root for ClamAV, the
+  download needed. Works in both portable and installed mode (no admin
+  prompt)
+- **Portable or installed — the first run asks**: the app offers a one-time
+  choice — install per-user to `%LocalAppData%\Programs\ClamAV UI` (no
+  admin rights or UAC; shortcuts and an "Apps" entry; the folder belongs to
+  the current user, so other local users can't tamper with the binaries) or
+  stay portable with the current folder as the root for ClamAV, the
   database, quarantine and settings. Installing later is one button in
   Settings
 - **About dialog** (Settings → About): version, a short description, a
@@ -146,24 +150,32 @@ request (`.github/workflows/tests.yml`).
 ## Installing on a new PC
 
 Just **copy the single `ClamAVUI.exe`** into any folder and run it.
-On the first start (when not already running from Program Files) the app
-asks how you want to use it — the choice is remembered and asked only once:
+On the first start (when not already installed) the app asks how you want
+to use it — the choice is remembered and asked only once:
 
-- **Install to Program Files** (one UAC prompt): the exe is copied to
-  `C:\Program Files\ClamAV UI` together with anything already sitting next
-  to it (ClamAV, database, quarantine, settings), ClamAV is downloaded from
-  GitHub there (~220 MB) along with the signature database if missing;
-  Start Menu and Desktop shortcuts are created, and the app appears in
-  "Programs and Features" with an uninstall option. Folder permissions are
-  managed via `icacls` so the database can update without admin rights.
+- **Install for this user** (no admin rights, no UAC): the exe is copied to
+  `%LocalAppData%\Programs\ClamAV UI` together with anything already
+  sitting next to it (ClamAV, database, quarantine, settings), ClamAV is
+  downloaded from GitHub there (~220 MB) along with the signature database
+  if missing; Start Menu and Desktop shortcuts are created, and the app
+  appears in "Apps" with an uninstall option. The folder is private to the
+  current user, so the binaries can't be replaced by other non-admin users
+  of the PC.
 - **Portable mode**: the current folder becomes the root — ClamAV, the
   signature database, quarantine and `settings.ini` all live next to the
   exe, no traces left on the system.
 
-Installing to Program Files can also be done later — there's a button in
-Settings. If ClamAV is already sitting next to the exe in a `clamav`
-folder, the app will use it as-is, and will carry it along with the
-database and quarantine during installation (nothing is downloaded again).
+Installing can also be done later — there's a button in Settings. If ClamAV
+is already sitting next to the exe in a `clamav` folder, the app will use
+it as-is, and will carry it along with the database and quarantine during
+installation (nothing is downloaded again).
+
+> Versions before 0.0.8 installed to `C:\Program Files\ClamAV UI`. Such
+> installs keep working and self-updating as before; to migrate one, run
+> `ClamAVUI.exe --install` from the old folder (the database and quarantine
+> are carried over to the per-user location). Uninstalling removes every
+> trace — the per-user install **and** any leftover Program Files copy
+> (that part asks for admin rights once).
 
 ## Releases
 
@@ -184,7 +196,7 @@ src/                       — the application (WinForms, C# 5), compiled into o
   Controls.cs              — custom-drawn buttons, toggles, cards, nav tabs
   MainForm.cs              — state fields, entry point, process plumbing, autostart
   MainForm.Ui.cs           — pages and UI construction, language switching
-  MainForm.Install.cs      — install/uninstall to Program Files, ACL fixes
+  MainForm.Install.cs      — per-user install/uninstall (+ legacy Program Files), ACL fixes
   MainForm.Settings.cs     — locating ClamAV, settings load/save
   MainForm.Quarantine.cs   — quarantine storage, index, threat dialog
   MainForm.Monitor.cs      — folder monitoring, exclusions
