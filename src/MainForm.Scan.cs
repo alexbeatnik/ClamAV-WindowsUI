@@ -205,16 +205,17 @@ namespace ClamAVUI
             checkingDb = true;
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
-                bool newer = false;
+                bool newer = false, reachedServer = false;
                 foreach (string url in DbUrls)
                 {
                     string dest = Path.Combine(dbDir, url.Substring(url.LastIndexOf('/') + 1));
                     long local = LocalCvdVersion(dest);
                     long remote = 0;
                     try { remote = RemoteCvdVersion(url); } catch { }
+                    if (remote > 0) reachedServer = true;
                     if (remote > 0 && remote > local) { newer = true; break; }
                 }
-                bool fresh = newer;
+                bool fresh = newer, checkedOk = reachedServer;
                 try
                 {
                     BeginInvoke((Action)delegate
@@ -222,6 +223,10 @@ namespace ClamAVUI
                         checkingDb = false;
                         lastDbCheck = DateTime.Now;
                         SaveSettings();
+                        // the server couldn't be reached (offline / transient failure):
+                        // don't claim "up to date", and don't clear an update flag a
+                        // previous successful check may have set — try again tomorrow
+                        if (!checkedOk) return;
                         updateAvailable = fresh;
                         RefreshDbStatus(); // shows/hides the update button
                         if (!fresh)
