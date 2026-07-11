@@ -228,7 +228,8 @@ namespace ClamAVUI
             A("status.monitorOn", "Monitoring enabled: new files will be checked automatically.", "Моніторинг увімкнено: нові файли перевірятимуться автоматично.");
             A("status.monitorOff", "Monitoring disabled.", "Моніторинг вимкнено.");
             A("log.watchFailed", "Failed to watch {0}: {1}\r\n", "Не вдалося стежити за {0}: {1}\r\n");
-            A("log.watchingFolders", "Monitoring: {0} folder(s).\r\n", "Моніторинг: {0} папок.\r\n");
+            // count comes after the colon so Ukrainian needs no plural declension
+            A("log.watchingFolders", "Monitoring: {0} folder(s).\r\n", "Папок у моніторингу: {0}.\r\n");
 
             // Scanning: pickers and generic
             A("dlg.pickFolder", "Choose a folder to scan", "Вибери папку для сканування");
@@ -400,6 +401,7 @@ namespace ClamAVUI
             A("status.updateError", "Database update error.", "Помилка оновлення баз.");
             A("log.updateErrorDetail", "\r\nUpdate error: {0}\r\nCheck your internet connection.\r\n", "\r\nПомилка оновлення: {0}\r\nПеревір інтернет-з'єднання.\r\n");
             A("err.notADatabaseFile", "{0}: the downloaded file doesn't look like a ClamAV database", "{0}: завантажений файл не схожий на базу ClamAV");
+            A("err.versionCheckFailed", "{0}: could not read the database version from the server", "{0}: не вдалося прочитати версію бази з сервера");
             A("status.downloadingDb", "Downloading {0}: {1:0} / {2:0} MB ({3:0}%)", "Завантаження {0}: {1:0} / {2:0} МБ ({3:0}%)");
             A("log.dbFileDownloaded", "{0} downloaded ✔\r\n", "{0} завантажено ✔\r\n");
 

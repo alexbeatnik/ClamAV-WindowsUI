@@ -375,6 +375,10 @@ namespace ClamAVUI
                         DownloadCvd(url, dest, name);
                         updated++;
                     }
+                    else
+                        // the server responded but the header isn't a CVD — surface an
+                        // error instead of silently reporting "already up to date"
+                        throw new Exception(string.Format(Lang.T("err.versionCheckFailed"), name));
                 }
             }
             catch (Exception ex)
