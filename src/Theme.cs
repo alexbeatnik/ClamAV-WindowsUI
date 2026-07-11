@@ -26,6 +26,11 @@ namespace ClamAVUI
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
         public const int EM_SETCUEBANNER = 0x1501;
+        // A modal dialog owned by the window disables it at the Win32 level —
+        // the reliable "is some dialog open?" probe (Form.Modal etc. don't see
+        // MessageBox), used to postpone timer-triggered work like scheduled scans
+        [DllImport("user32.dll")]
+        public static extern bool IsWindowEnabled(IntPtr hWnd);
     }
 
     // Dark theme palette — deep navy-tinted surfaces + vivid accents, the look

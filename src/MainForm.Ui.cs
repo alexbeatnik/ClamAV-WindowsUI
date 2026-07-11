@@ -177,6 +177,14 @@ namespace ClamAVUI
             };
             autoUpdateTimer.Start();
 
+            // Scheduled quick scan: a cheap due-time check every 5 minutes. The periods
+            // are coarse (a day / a week), so minute precision is plenty, and the first
+            // tick lands after startup has settled instead of joining the boot storm.
+            schedTimer = new Timer();
+            schedTimer.Interval = 300000;
+            schedTimer.Tick += delegate { MaybeRunScheduledScan(); };
+            schedTimer.Start();
+
             // Scan heartbeat: guarantees a progress line every 10s even when clamscan
             // is stuck for a long time on a large file/archive and prints nothing.
             scanHeartbeat = new Timer();
@@ -918,36 +926,56 @@ namespace ClamAVUI
             perfHint.Location = new Point(520, 160);
             UpdatePerfButtons();
 
+            // Scheduled quick scan — the same radio-style row as the perf selector
+            schedLabel = new Label();
+            schedLabel.Text = Lang.T("settings.schedule");
+            schedLabel.AutoSize = true;
+            schedLabel.ForeColor = Theme.Text;
+            schedLabel.BackColor = Theme.Card;
+            schedLabel.Location = new Point(520, 216);
+            btnSchedOff = MakeButton(Lang.T("sched.off"), 70, Theme.Btn, Theme.BtnHot);
+            btnSchedOff.SetBounds(520, 242, 70, 30);
+            btnSchedOff.Click += delegate { SetSchedMode(0); };
+            btnSchedDaily = MakeButton(Lang.T("sched.daily"), 100, Theme.Btn, Theme.BtnHot);
+            btnSchedDaily.SetBounds(596, 242, 100, 30);
+            btnSchedDaily.Click += delegate { SetSchedMode(1); };
+            btnSchedWeekly = MakeButton(Lang.T("sched.weekly"), 110, Theme.Btn, Theme.BtnHot);
+            btnSchedWeekly.SetBounds(702, 242, 110, 30);
+            btnSchedWeekly.Click += delegate { SetSchedMode(2); };
+            foreach (ModernButton b in new ModernButton[] { btnSchedOff, btnSchedDaily, btnSchedWeekly })
+                b.BackColor = Theme.Card;
+            UpdateSchedButtons();
+
             // exclusion-list editor lives here now — on the quarantine page it looked
             // like one more action applied to the selected file
             btnQuarExclusions = MakeLightButton(Lang.T("btn.exclusions"), Ico.Ban);
             btnQuarExclusions.BackColor = Theme.Card;
-            btnQuarExclusions.SetBounds(520, 216, 260, 30);
+            btnQuarExclusions.SetBounds(520, 288, 260, 30);
             btnQuarExclusions.Click += delegate { EditExclusions(); };
 
-            // STATUS block: engine / database / monitoring / quarantine at a glance
+            // STATUS block: engine / database / monitoring / quarantine / scheduler
             setStatusHeader = new Label();
             setStatusHeader.Text = Lang.T("settings.status").ToUpperInvariant();
             setStatusHeader.Font = new Font("Segoe UI Semibold", 8f);
             setStatusHeader.ForeColor = Theme.Muted;
             setStatusHeader.AutoSize = true;
             setStatusHeader.BackColor = Theme.Card;
-            setStatusHeader.Location = new Point(520, 272);
+            setStatusHeader.Location = new Point(520, 344);
             cardSettingsPanel.Controls.Add(setStatusHeader);
-            setStatusCaps = new Label[4];
-            setStatusVals = new Label[4];
-            for (int i = 0; i < 4; i++)
+            setStatusCaps = new Label[5];
+            setStatusVals = new Label[5];
+            for (int i = 0; i < 5; i++)
             {
                 setStatusCaps[i] = new Label();
                 setStatusCaps[i].AutoSize = true;
                 setStatusCaps[i].ForeColor = Theme.Muted;
                 setStatusCaps[i].BackColor = Theme.Card;
-                setStatusCaps[i].Location = new Point(520, 298 + i * 28);
+                setStatusCaps[i].Location = new Point(520, 370 + i * 28);
                 setStatusVals[i] = new Label();
                 setStatusVals[i].AutoSize = true;
                 setStatusVals[i].Font = new Font("Segoe UI Semibold", 9.5f);
                 setStatusVals[i].BackColor = Theme.Card;
-                setStatusVals[i].Location = new Point(660, 298 + i * 28);
+                setStatusVals[i].Location = new Point(660, 370 + i * 28);
                 cardSettingsPanel.Controls.Add(setStatusCaps[i]);
                 cardSettingsPanel.Controls.Add(setStatusVals[i]);
             }
@@ -1006,6 +1034,10 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(btnPerfNormal);
             cardSettingsPanel.Controls.Add(btnPerfHigh);
             cardSettingsPanel.Controls.Add(perfHint);
+            cardSettingsPanel.Controls.Add(schedLabel);
+            cardSettingsPanel.Controls.Add(btnSchedOff);
+            cardSettingsPanel.Controls.Add(btnSchedDaily);
+            cardSettingsPanel.Controls.Add(btnSchedWeekly);
             cardSettingsPanel.Controls.Add(btnQuarExclusions);
             cardSettingsPanel.Controls.Add(btnInstall);
             cardSettingsPanel.Controls.Add(btnFixWinTemp);
@@ -1027,7 +1059,7 @@ namespace ClamAVUI
             using (var dlg = new Form())
             {
                 dlg.Text = Lang.T("about.title");
-                dlg.ClientSize = new Size(600, 564);
+                dlg.ClientSize = new Size(600, 596);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.MinimizeBox = dlg.MaximizeBox = false;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1090,12 +1122,13 @@ namespace ClamAVUI
                 var star = link(Lang.T("about.star"), ProjectUrl, 358);
                 var releases = link(Lang.T("about.releases"), ProjectUrl + "/releases", 386);
                 var follow = link(Lang.T("about.follow"), AuthorUrl, 414);
+                var license = link(Lang.T("about.license"), ProjectUrl + "/blob/main/LICENSE", 442);
 
                 var powered = new Label();
                 powered.Text = Lang.T("about.powered");
                 powered.Font = new Font("Segoe UI", 8f);
                 powered.ForeColor = Theme.Muted;
-                powered.SetBounds(24, 452, dlg.ClientSize.Width - 48, 40);
+                powered.SetBounds(24, 482, dlg.ClientSize.Width - 48, 40);
 
                 var buttons = new FlowLayoutPanel();
                 buttons.Dock = DockStyle.Bottom;
@@ -1116,6 +1149,7 @@ namespace ClamAVUI
                 dlg.Controls.Add(star);
                 dlg.Controls.Add(releases);
                 dlg.Controls.Add(follow);
+                dlg.Controls.Add(license);
                 dlg.Controls.Add(powered);
                 dlg.Controls.Add(buttons);
                 dlg.CancelButton = close;
@@ -1282,7 +1316,34 @@ namespace ClamAVUI
             }
         }
 
-        // Refreshes the STATUS block on the settings page (engine / db / monitor / quarantine)
+        // ---------- Scheduled quick scan selector ----------
+
+        void SetSchedMode(int mode)
+        {
+            if (schedMode == mode) return;
+            schedMode = mode;
+            UpdateSchedButtons();
+            SaveSettings();
+            statusLabel.Text = Lang.T(mode == 0 ? "status.schedOff"
+                : mode == 1 ? "status.schedDaily" : "status.schedWeekly");
+        }
+
+        void UpdateSchedButtons()
+        {
+            var btns = new ModernButton[] { btnSchedOff, btnSchedDaily, btnSchedWeekly };
+            string[] keys = { "sched.off", "sched.daily", "sched.weekly" };
+            for (int i = 0; i < btns.Length; i++)
+            {
+                bool on = schedMode == i;
+                btns[i].Text = (on ? "● " : "○ ") + Lang.T(keys[i]);
+                btns[i].Back = on ? Theme.Accent : Theme.Btn;
+                btns[i].Hover = on ? Theme.AccentHot : Theme.BtnHot;
+                btns[i].TextColor = on ? Theme.Text : Theme.BtnText;
+                btns[i].Invalidate();
+            }
+        }
+
+        // Refreshes the STATUS block on the settings page (engine / db / monitor / quarantine / scheduler)
         void RefreshSettingsStatus()
         {
             if (setStatusVals == null) return;
@@ -1290,6 +1351,7 @@ namespace ClamAVUI
             setStatusCaps[1].Text = Lang.T("sstat.database");
             setStatusCaps[2].Text = Lang.T("sstat.monitoring");
             setStatusCaps[3].Text = Lang.T("sstat.quarantine");
+            setStatusCaps[4].Text = Lang.T("sstat.schedule");
 
             bool engine = clamDir != null;
             setStatusVals[0].Text = engine
@@ -1310,6 +1372,10 @@ namespace ClamAVUI
             int q = QuarantineCount();
             setStatusVals[3].Text = string.Format(Lang.T("sval.filesN"), q);
             setStatusVals[3].ForeColor = q > 0 ? Theme.Warn : Theme.Text;
+
+            setStatusVals[4].Text = Lang.T(schedMode == 0 ? "sval.disabled"
+                : schedMode == 1 ? "sched.daily" : "sched.weekly");
+            setStatusVals[4].ForeColor = schedMode != 0 ? Theme.Good : Theme.Muted;
         }
 
         // Re-applies text to every persistent control after a language switch.
@@ -1375,6 +1441,8 @@ namespace ClamAVUI
             perfLabel.Text = Lang.T("settings.performance");
             perfHint.Text = Lang.T("settings.perfHint");
             UpdatePerfButtons(); // re-applies the localized ●/○ labels
+            schedLabel.Text = Lang.T("settings.schedule");
+            UpdateSchedButtons();
             setStatusHeader.Text = Lang.T("settings.status").ToUpperInvariant();
             RefreshSettingsStatus();
             btnInstall.Text = Lang.T("btn.installPF");

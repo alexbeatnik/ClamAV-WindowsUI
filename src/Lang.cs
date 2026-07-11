@@ -156,6 +156,18 @@ namespace ClamAVUI
             A("perf.normal", "Normal", "Звичайна");
             A("perf.high", "High", "Висока");
 
+            // Scheduled quick scan
+            A("settings.schedule", "Scheduled quick scan:", "Плановий швидкий скан:");
+            A("sched.off", "Off", "Вимк.");
+            A("sched.daily", "Daily", "Щодня");
+            A("sched.weekly", "Weekly", "Щотижня");
+            A("sstat.schedule", "Scheduled scan", "Плановий скан");
+            A("status.schedOff", "Scheduled scan disabled.", "Планове сканування вимкнено.");
+            A("status.schedDaily", "Quick scan will run automatically every day.", "Швидкий скан виконуватиметься автоматично щодня.");
+            A("status.schedWeekly", "Quick scan will run automatically every week.", "Швидкий скан виконуватиметься автоматично щотижня.");
+            A("log.scheduledScanStart", "Scheduled scan: the quick scan is due — started automatically.\r\n", "Планове сканування: настав час швидкого скану — запущено автоматично.\r\n");
+            A("tray.scheduledScan", "Scheduled quick scan started.", "Розпочато плановий швидкий скан.");
+
             // USB drive detection
             A("usb.title", "New drive detected", "Виявлено новий накопичувач");
             A("usb.scanPrompt", "New drive detected: {0}\r\n\r\nScan it for threats now?",
@@ -413,7 +425,7 @@ namespace ClamAVUI
             // About dialog
             A("btn.about", "ABOUT", "ПРО ПРОГРАМУ");
             A("about.title", "About ClamAV UI", "Про ClamAV UI");
-            A("about.version", "Version {0} — free & open source", "Версія {0} — безкоштовна, з відкритим кодом");
+            A("about.version", "Version {0} — free & open source, Apache 2.0 license", "Версія {0} — безкоштовна, відкритий код, ліцензія Apache 2.0");
             A("about.desc", "A lightweight, portable Windows interface for the free ClamAV antivirus engine: "
                 + "on-demand scans, automatic signature updates, new-file monitoring, USB checks and a "
                 + "neutralized quarantine — no background services, no ads.",
@@ -437,6 +449,7 @@ namespace ClamAVUI
             A("about.star", "★  Star this project on GitHub", "★  Постав зірку проєкту на GitHub");
             A("about.releases", "↓  All releases — download the latest version", "↓  Усі релізи — завантажити найновішу версію");
             A("about.follow", "+  Follow the author on GitHub", "+  Підписатися на автора на GitHub");
+            A("about.license", "§  Apache 2.0 license — free to use, modify and share", "§  Ліцензія Apache 2.0 — вільно використовуй, змінюй і поширюй");
             A("about.powered", "Powered by the ClamAV® engine (© Cisco Systems, Inc). This project is an independent "
                 + "open-source UI and is not affiliated with Cisco.",
                 "Працює на рушії ClamAV® (© Cisco Systems, Inc). Цей проєкт — незалежний open-source інтерфейс, "
