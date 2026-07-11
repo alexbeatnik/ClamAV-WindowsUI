@@ -567,8 +567,10 @@ namespace ClamAVUI
                     TryDelete(part);
                     throw new Exception(string.Format(Lang.T("err.notADatabaseFile"), name));
                 }
-                if (File.Exists(dest)) File.Delete(dest);
-                File.Move(part, dest);
+                // Replace, not Delete+Move: a crash between the two would leave no
+                // working database at all. ReplaceFile swaps in place (same folder).
+                if (File.Exists(dest)) File.Replace(part, dest, null);
+                else File.Move(part, dest);
                 UiLog(string.Format(Lang.T("log.dbFileDownloaded"), name), Theme.Good);
             }
             catch
