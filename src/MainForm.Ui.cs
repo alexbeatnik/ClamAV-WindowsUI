@@ -44,7 +44,7 @@ namespace ClamAVUI
             }
 
             // The first normal start decides where the app lives (portable vs
-            // Program Files) BEFORE anything is downloaded, so ClamAV, the database
+            // per-user install) BEFORE anything is downloaded, so ClamAV, the database
             // and quarantine land in the right place. After that, a clean PC gets
             // the ClamAV download offer as before.
             Shown += delegate
@@ -55,10 +55,10 @@ namespace ClamAVUI
                     modeAsked = true; // one-time question, even if UAC is declined later
                     SaveSettings();
                     if (MessageBox.Show(this,
-                        string.Format(Lang.T("msg.firstRunModeChoice"), AppDomain.CurrentDomain.BaseDirectory),
+                        string.Format(Lang.T("msg.firstRunModeChoice"), AppDomain.CurrentDomain.BaseDirectory, InstallDir),
                         AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     {
-                        LaunchInstaller(); // copies everything to Program Files and relaunches from there
+                        LaunchInstaller(); // copies everything to the per-user folder and relaunches from there
                         return;
                     }
                     // portable mode: the current folder stays the root for ClamAV,

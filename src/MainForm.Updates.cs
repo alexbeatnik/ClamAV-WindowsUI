@@ -60,8 +60,8 @@ namespace ClamAVUI
                     if (new Version(vm.Groups[1].Value) > new Version(AppVersion))
                     {
                         version = vm.Groups[1].Value;
-                        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                        string updatePath = Path.Combine(baseDir, "ClamAVUI.update.exe");
+                        // %TEMP% is always writable, wherever the app itself lives
+                        string updatePath = Path.Combine(Path.GetTempPath(), "ClamAVUI.update.exe");
                         TryDelete(updatePath); // leftover from an earlier interrupted attempt
                         using (var wc = new System.Net.WebClient())
                         {
@@ -153,14 +153,12 @@ namespace ClamAVUI
         {
             try
             {
-                var psi = new ProcessStartInfo(Application.ExecutablePath, "--install");
-                psi.UseShellExecute = true;
-                psi.Verb = "runas"; // UAC
-                Process.Start(psi);
+                // per-user install (%LocalAppData%\Programs) — no elevation needed
+                Process.Start(Application.ExecutablePath, "--install");
                 reallyClose = true;
                 Close(); // the installed copy will launch itself after copying
             }
-            catch // user declined the UAC prompt
+            catch
             {
                 statusLabel.Text = Lang.T("status.installCancelled");
             }

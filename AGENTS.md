@@ -27,9 +27,11 @@ reference means editing the `/r:` lists in **both** scripts. CI
 - **.NET Framework 4.8 BCL only** — no NuGet, no third-party libraries,
   no image assets (icons are GDI+ vector glyphs in `src/Icons.cs`).
 - **UTF-8 sources** (`/codepage:65001`); Ukrainian literals are normal.
-- The app always runs **non-elevated**. Anything that needs admin is a
-  separate short-lived `--install`/`--uninstall`/`--fix-wintemp` relaunch
-  with `Verb = "runas"` (see `MainForm.Install.cs`).
+- The app always runs **non-elevated**. Install is per-user
+  (`%LocalAppData%\Programs`) and needs no admin; the few admin-only actions
+  (`--fix-wintemp`, removing a legacy Program Files install via
+  `--uninstall`) are separate short-lived relaunches with `Verb = "runas"`
+  (see `MainForm.Install.cs`).
 - Never commit build outputs, `clamav/`, `settings.ini`, `scans.log`, or
   `quarantine/` (all gitignored).
 
@@ -46,7 +48,7 @@ One `MainForm` class split into partial files by concern:
 | `src/MainForm.Settings.cs` | locating ClamAV, `settings.ini` load/save |
 | `src/MainForm.Quarantine.cs` | neutralized `.quar` storage, index, threat dialog |
 | `src/MainForm.Monitor.cs` | FileSystemWatcher monitoring, exclusions |
-| `src/MainForm.Install.cs` | install/uninstall to Program Files, ACL fixes |
+| `src/MainForm.Install.cs` | per-user install/uninstall, legacy Program Files uninstall, ACL fixes |
 | `src/MainForm.Usb.cs` | USB volume-arrival prompt |
 | `src/Controls.cs`, `src/Icons.cs`, `src/Theme.cs` | custom-drawn controls, glyphs, dark palette |
 | `src/Lang.cs` | the English/Ukrainian string table |
