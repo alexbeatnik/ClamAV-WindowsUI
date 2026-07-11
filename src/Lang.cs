@@ -425,7 +425,8 @@ namespace ClamAVUI
             // About dialog
             A("btn.about", "ABOUT", "ПРО ПРОГРАМУ");
             A("about.title", "About ClamAV UI", "Про ClamAV UI");
-            A("about.version", "Version {0} — free & open source, Apache 2.0 license", "Версія {0} — безкоштовна, відкритий код, ліцензія Apache 2.0");
+            // no "&" here: a Label eats it as a mnemonic marker
+            A("about.version", "Version {0} — free, open source, Apache 2.0 license", "Версія {0} — безкоштовна, відкритий код, ліцензія Apache 2.0");
             A("about.desc", "A lightweight, portable Windows interface for the free ClamAV antivirus engine: "
                 + "on-demand scans, automatic signature updates, new-file monitoring, USB checks and a "
                 + "neutralized quarantine — no background services, no ads.",
