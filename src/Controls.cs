@@ -227,6 +227,7 @@ namespace ClamAVUI
     class ShieldIndicator : Control
     {
         public ShieldState State = ShieldState.Warning;
+        float progress = -1f; // 0..1 while a scan runs; -1 = unknown (three dots)
 
         public ShieldIndicator()
         {
@@ -235,7 +236,17 @@ namespace ClamAVUI
             Size = new Size(96, 96);
         }
 
-        public void SetState(ShieldState s) { State = s; Invalidate(); }
+        public void SetState(ShieldState s) { State = s; progress = -1f; Invalidate(); }
+
+        // The busy shield doubles as a progress readout: once the scan knows its
+        // total, the percent replaces the three dots (see UpdateScanProgress)
+        public void SetProgress(double f)
+        {
+            float v = (float)Math.Max(0, Math.Min(1, f));
+            if (Math.Abs(v - progress) < 0.005f) return; // skip sub-half-percent repaints
+            progress = v;
+            Invalidate();
+        }
 
         static GraphicsPath ShieldPath(float w, float h)
         {
@@ -302,7 +313,20 @@ namespace ClamAVUI
                 }
                 else if (State == ShieldState.Busy)
                 {
-                    using (var b = new SolidBrush(Color.White))
+                    if (progress >= 0f)
+                    {
+                        // scan progress percent; "100%" gets a slightly smaller face to fit
+                        string txt = ((int)Math.Round(progress * 100)) + "%";
+                        using (var f = new Font("Segoe UI Semibold", h * (txt.Length > 3 ? 0.155f : 0.19f), GraphicsUnit.Pixel))
+                        using (var sf = new StringFormat())
+                        using (var b = new SolidBrush(Color.White))
+                        {
+                            sf.Alignment = StringAlignment.Center;
+                            sf.LineAlignment = StringAlignment.Center;
+                            g.DrawString(txt, f, b, new RectangleF(0, h * 0.28f, w, h * 0.40f), sf);
+                        }
+                    }
+                    else using (var b = new SolidBrush(Color.White))
                     {
                         float r = w * 0.045f;
                         g.FillEllipse(b, w * .32f - r, h * .48f - r, r * 2, r * 2);

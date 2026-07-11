@@ -109,6 +109,7 @@ namespace ClamAVUI
             if (totalToScan <= 0 || scannedCount <= 0) return;
             double f = Math.Min(1.0, (double)scannedCount / totalToScan);
             progress.SetFraction(f);
+            shield.SetProgress(f); // the busy shield shows the percent instead of dots
             // ETA via a moving window (rate over the last ~seconds), not the whole elapsed
             // time — otherwise a slow start (loading the DB + counting files on C:\, which
             // hammers the disk) inflates the estimate to hundreds of hours.
