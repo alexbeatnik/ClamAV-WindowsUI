@@ -173,8 +173,9 @@ installation (nothing is downloaded again).
 > Versions before 0.0.8 installed to `C:\Program Files\ClamAV UI`. Such
 > installs keep working and self-updating as before; to migrate one, run
 > `ClamAVUI.exe --install` from the old folder (the database and quarantine
-> are carried over to the per-user location), then remove the old entry via
-> "Programs and Features".
+> are carried over to the per-user location). Uninstalling removes every
+> trace — the per-user install **and** any leftover Program Files copy
+> (that part asks for admin rights once).
 
 ## Releases
 

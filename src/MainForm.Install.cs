@@ -162,9 +162,12 @@ namespace ClamAVUI
 
         static void RunUninstallMode()
         {
-            // A pre-0.0.8 copy in Program Files needs admin to remove (HKLM entry,
-            // all-users shortcut, the folder itself); the per-user install doesn't.
-            bool legacy = IsUnder(Application.ExecutablePath, LegacyInstallDir);
+            // Uninstall removes EVERY trace: the per-user install and, if present,
+            // a pre-0.0.8 copy in Program Files (leftover after a migration, or
+            // the copy we're running from). Touching Program Files — its folder,
+            // the HKLM entry, the all-users shortcut — needs admin; a per-user
+            // copy alone does not, so elevation is requested only when needed.
+            bool legacy = Directory.Exists(LegacyInstallDir);
             if (legacy && !IsAdmin())
             {
                 try
@@ -195,15 +198,17 @@ namespace ClamAVUI
                 using (var k = Registry.CurrentUser.OpenSubKey(RunKeyPath, true))
                     if (k != null) k.DeleteValue(RunValueName, false);
                 MessageBox.Show(Lang.T("uninstall.done"), AppName);
-                // The folder itself is removed after exit, since our exe is still running.
-                // We launch this AFTER the MessageBox: otherwise rd runs while the window
-                // is still open and can't delete the locked exe.
-                var psi = new ProcessStartInfo("cmd.exe",
-                    "/c timeout /t 3 /nobreak >nul & rd /s /q \""
-                    + (legacy ? LegacyInstallDir : InstallDir) + "\"");
-                psi.CreateNoWindow = true;
-                psi.UseShellExecute = false;
-                Process.Start(psi);
+                // The folders themselves are removed after exit, since our exe is still
+                // running from one of them. Launched AFTER the MessageBox: otherwise rd
+                // runs while the window is still open and can't delete the locked exe.
+                // rd on a folder that doesn't exist is a harmless no-op.
+                string sweep = "rd /s /q \"" + InstallDir + "\"";
+                if (legacy) sweep += " & rd /s /q \"" + LegacyInstallDir + "\"";
+                var rm = new ProcessStartInfo("cmd.exe",
+                    "/c timeout /t 3 /nobreak >nul & " + sweep);
+                rm.CreateNoWindow = true;
+                rm.UseShellExecute = false;
+                Process.Start(rm);
             }
             catch (Exception ex)
             {
