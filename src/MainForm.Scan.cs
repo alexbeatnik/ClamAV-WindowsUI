@@ -297,13 +297,18 @@ namespace ClamAVUI
             var sb = new StringBuilder();
             foreach (string d in all)
             {
-                // (\\|$): matches only the path itself or what's inside it,
-                // otherwise ^C:\...\quarantine would also match C:\...\quarantine2
-                string rx = "(?i)^" + Regex.Escape(d.TrimEnd('\\')) + "(\\\\|$)";
+                string rx = ExcludePathRegex(d);
                 sb.Append(" --exclude-dir=\"").Append(rx).Append("\"");
                 sb.Append(" --exclude=\"").Append(rx).Append("\"");
             }
             return sb.ToString();
+        }
+
+        // (\\|$): matches only the path itself or what's inside it,
+        // otherwise ^C:\...\quarantine would also match C:\...\quarantine2
+        internal static string ExcludePathRegex(string dir)
+        {
+            return "(?i)^" + Regex.Escape(dir.TrimEnd('\\')) + "(\\\\|$)";
         }
 
         // True if path is root itself or lies inside it. A plain StartsWith would not
@@ -393,10 +398,7 @@ namespace ClamAVUI
                 if (string.IsNullOrEmpty(p)) return;
                 try { p = Path.GetFullPath(p); } catch { return; }
                 if (!Directory.Exists(p)) return;
-                foreach (string e in list)
-                    if (IsUnder(p, e)) return; // already covered by a broader root
-                list.RemoveAll(delegate(string e) { return IsUnder(e, p); });
-                list.Add(p);
+                MergeScanRoot(list, p);
             };
             add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
             add(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
@@ -410,6 +412,16 @@ namespace ClamAVUI
             add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             add(Environment.GetEnvironmentVariable("PUBLIC"));
             return list;
+        }
+
+        // Adds a scan root unless a broader root already covers it, and drops any
+        // narrower roots the new one covers — each location ends up scanned once
+        internal static void MergeScanRoot(List<string> list, string path)
+        {
+            foreach (string e in list)
+                if (IsUnder(path, e)) return;
+            list.RemoveAll(delegate(string e) { return IsUnder(e, path); });
+            list.Add(path);
         }
 
         // Paths of running processes' executables — checks what's currently running

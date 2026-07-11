@@ -1,5 +1,5 @@
 // Tests for the risky-extension filter, the file-lock probe, theme geometry,
-// and the scheduled-scan due rule.
+// the scheduled-scan due rule, the temp-download filter, and the watchability probe.
 using System;
 using System.Drawing;
 using System.IO;
@@ -61,6 +61,50 @@ namespace ClamAVUI.Tests
                     Assert.True(MainForm.IsFileLocked(p), "file opened with FileShare.None");
                 Assert.False(MainForm.IsFileLocked(p), "unlocked again after the handle closes");
             }
+        }
+    }
+
+    static class TempDownloadExtensionTests
+    {
+        public static void TestBrowserTempExtensionsAreSkipped()
+        {
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\setup.exe.crdownload"), ".crdownload (Chrome)");
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\movie.mkv.part"), ".part (Firefox)");
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\x.tmp"), ".tmp");
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\y.opdownload"), ".opdownload (Opera)");
+        }
+
+        public static void TestLookupIsCaseInsensitive()
+        {
+            Assert.True(MainForm.HasTempDownloadExtension(@"C:\d\SETUP.EXE.CRDOWNLOAD"), "upper-case extension");
+        }
+
+        public static void TestFinalNamesAreNotSkipped()
+        {
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\setup.exe"), ".exe");
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\archive.zip"), ".zip");
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\noext"), "no extension at all");
+        }
+
+        public static void TestOnlyTheFinalExtensionCounts()
+        {
+            // after the rename .part → .exe the file must become scannable
+            Assert.False(MainForm.HasTempDownloadExtension(@"C:\d\setup.part.exe"), "temp marker not at the end");
+        }
+    }
+
+    static class CanWatchDirectoryTests
+    {
+        public static void TestExistingReadableDirIsWatchable()
+        {
+            using (var tmp = new TempDir())
+                Assert.True(MainForm.CanWatchDirectory(tmp.Path), "fresh temp dir");
+        }
+
+        public static void TestMissingDirIsNotWatchable()
+        {
+            Assert.False(MainForm.CanWatchDirectory(
+                @"C:\no\such\dir\" + Guid.NewGuid().ToString("N")), "nonexistent dir");
         }
     }
 

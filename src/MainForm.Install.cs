@@ -241,7 +241,7 @@ namespace ClamAVUI
         // Cheap capability probe: FileSystemWatcher needs at least list access to the
         // directory. Used both to decide whether C:\Windows\Temp is worth adding to the
         // default watch list, and to check whether FixWinTempAcl actually took effect.
-        static bool CanWatchDirectory(string dir)
+        internal static bool CanWatchDirectory(string dir)
         {
             try { Directory.GetFiles(dir); return true; }
             catch { return false; }

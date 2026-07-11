@@ -26,10 +26,30 @@ namespace ClamAVUI.Tests
                 Assert.Equal("no.such.key", Lang.T("no.such.key"), "same in Ukrainian");
         }
 
+        public static void TestNewKeysExistInBothLanguages()
+        {
+            // scheduler + license strings added in 0.0.7 — a key that falls back to
+            // itself (or to English in the Ukrainian table) means a missing A() entry
+            string[] keys =
+            {
+                "settings.schedule", "sched.off", "sched.daily", "sched.weekly",
+                "sstat.schedule", "status.schedOff", "status.schedDaily", "status.schedWeekly",
+                "log.scheduledScanStart", "tray.scheduledScan", "about.license"
+            };
+            foreach (string key in keys)
+            {
+                string en, uk;
+                using (new LangScope(Lang.Language.English)) en = Lang.T(key);
+                using (new LangScope(Lang.Language.Ukrainian)) uk = Lang.T(key);
+                Assert.True(en != key, key + " exists in English");
+                Assert.True(uk != key && uk != en, key + " has its own Ukrainian translation");
+            }
+        }
+
         public static void TestFormatPlaceholdersSurviveTranslation()
         {
             // keys used with string.Format must keep their placeholders in both languages
-            string[] formatKeys = { "settings.monitorLabel", "status.progress", "hero.dbFrom", "msg.deleteConfirm" };
+            string[] formatKeys = { "settings.monitorLabel", "status.progress", "hero.dbFrom", "msg.deleteConfirm", "about.version" };
             foreach (string key in formatKeys)
             {
                 string en, uk;
