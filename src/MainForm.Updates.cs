@@ -104,8 +104,7 @@ namespace ClamAVUI
         {
             try
             {
-                tray.ShowBalloonTip(4000, AppName,
-                    string.Format(Lang.T("tray.appUpdateInstalling"), version), ToolTipIcon.Info);
+                Notify(4000, string.Format(Lang.T("tray.appUpdateInstalling"), version), ToolTipIcon.Info);
             }
             catch { }
             string exePath = Application.ExecutablePath;

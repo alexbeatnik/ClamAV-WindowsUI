@@ -65,8 +65,7 @@ namespace ClamAVUI
             catch { return; }
             if (scanRunning || updateRunning)
             {
-                tray.ShowBalloonTip(6000, AppName,
-                    string.Format(Lang.T("tray.usbBusy"), root), ToolTipIcon.Info);
+                Notify(6000, string.Format(Lang.T("tray.usbBusy"), root), ToolTipIcon.Info);
                 return;
             }
             // Invisible topmost owner: the prompt must surface above other windows

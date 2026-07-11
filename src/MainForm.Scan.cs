@@ -236,8 +236,7 @@ namespace ClamAVUI
                         }
                         if (chkAutoUpdate.Checked)
                         {
-                            tray.ShowBalloonTip(5000, AppName,
-                                Lang.T("tray.dbUpdateDownloading"), ToolTipIcon.Info);
+                            Notify(5000, Lang.T("tray.dbUpdateDownloading"), ToolTipIcon.Info);
                             AppendLog(string.Format(Lang.T("log.dbNewerAutoDownload"), DateTime.Now), Theme.Muted);
                             RunFreshclam(true);
                         }
@@ -245,8 +244,7 @@ namespace ClamAVUI
                         {
                             heroSub.Text = Lang.T("hero.dbUpdateAvailable");
                             statusLabel.Text = Lang.T("status.dbUpdateAvailablePress");
-                            tray.ShowBalloonTip(5000, AppName,
-                                Lang.T("tray.dbUpdateAvailablePress"), ToolTipIcon.Info);
+                            Notify(5000, Lang.T("tray.dbUpdateAvailablePress"), ToolTipIcon.Info);
                         }
                     });
                 }
@@ -274,7 +272,7 @@ namespace ClamAVUI
             lastScheduledScan = DateTime.Now;
             SaveSettings();
             AppendLog(Lang.T("log.scheduledScanStart"), Theme.Muted);
-            tray.ShowBalloonTip(4000, AppName, Lang.T("tray.scheduledScan"), ToolTipIcon.Info);
+            Notify(4000, Lang.T("tray.scheduledScan"), ToolTipIcon.Info);
         }
 
         // Pure due-time rule (unit-tested). mode: 0 = off, 1 = daily, 2 = weekly.
@@ -976,13 +974,12 @@ namespace ClamAVUI
                 if (wasMonitor)
                 {
                     AppendLog(Lang.T("log.newFilesClean"), Theme.Good);
-                    tray.ShowBalloonTip(4000, AppName,
-                        string.Format(Lang.T("tray.newFilesClean"), scannedCount), ToolTipIcon.Info);
+                    Notify(4000, string.Format(Lang.T("tray.newFilesClean"), scannedCount), ToolTipIcon.Info);
                 }
                 else
                 {
                     AppendLog(Lang.T("log.noThreatsFound"), Theme.Good);
-                    tray.ShowBalloonTip(4000, AppName, Lang.T("tray.scanDoneClean"), ToolTipIcon.Info);
+                    Notify(4000, Lang.T("tray.scanDoneClean"), ToolTipIcon.Info);
                 }
             }
             else if (exitCode == 1)

@@ -138,6 +138,7 @@ namespace ClamAVUI
             A("settings.autostart", "Start with Windows (in tray)", "Запускати разом з Windows (у треї)");
             A("settings.language", "Interface language:", "Мова інтерфейсу:");
             A("settings.usbPrompt", "Offer to scan USB drives when connected", "Пропонувати перевірку USB-накопичувачів при підключенні");
+            A("settings.notifications", "Tray notifications (threat alerts are always shown)", "Сповіщення в треї (про знайдені загрози — завжди)");
             A("settings.status", "Status", "Стан");
             A("sstat.engine", "Engine", "Рушій");
             A("sstat.database", "Database", "Бази");

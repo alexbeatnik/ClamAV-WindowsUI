@@ -115,6 +115,7 @@ namespace ClamAVUI
         Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, scanProgressLabel;
         ShieldIndicator shield;
         Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt, chkLogDetails;
+        Toggle chkNotify; // tray notifications; threat alerts are shown regardless (see Notify)
         SlimMarquee progress;
         NotifyIcon tray;
         ToolStripItem trayOpenItem, trayExitItem;

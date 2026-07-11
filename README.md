@@ -98,6 +98,9 @@ anytime from Settings — no restart required.
   brings the running instance forward instead (mutex + broadcast message)
 - Tray icon: the close button minimizes to tray, with notifications for
   scan results
+- **Notifications toggle** (Settings): informational tray balloons (scan
+  finished clean, database update available, USB drive busy, self-update…)
+  can be switched off — **threat alerts are always shown** regardless
 - Modern dark theme with icon buttons (custom-drawn vector glyphs, no image
   assets or third-party UI libraries)
 - **Daily database version checks** instead of hammering the server every
