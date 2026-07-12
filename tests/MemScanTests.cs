@@ -104,6 +104,30 @@ namespace ClamAVUI.Tests
             }
         }
 
+        public static void TestSortPathsBySizeSmallestFirst()
+        {
+            var sizes = new Dictionary<string, long>
+            {
+                { "big", 200L * 1024 * 1024 },
+                { "tiny", 1024 },
+                { "mid", 5L * 1024 * 1024 },
+            };
+            var files = new List<string> { "big", "tiny", "mid" };
+            MainForm.SortPathsBySize(files, delegate(string p) { return sizes[p]; });
+            Assert.Equal("tiny", files[0], "smallest file scanned first");
+            Assert.Equal("mid", files[1], "medium file second");
+            Assert.Equal("big", files[2], "heaviest file falls to the tail");
+        }
+
+        public static void TestSortPathsBySizeMissingSizeIsZero()
+        {
+            // A file whose size can't be read (returns 0) sorts to the front, not crashes.
+            var files = new List<string> { "a", "b" };
+            MainForm.SortPathsBySize(files, delegate(string p) { return p == "a" ? 100L : 0L; });
+            Assert.Equal("b", files[0], "unreadable/zero-size sorts first");
+            Assert.Equal("a", files[1], "sized file after");
+        }
+
         public static void TestSanitizeNameStripsInvalidChars()
         {
             string clean = MainForm.SanitizeName("chrome");

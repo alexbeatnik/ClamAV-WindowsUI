@@ -72,7 +72,7 @@ args) and mirrored in `WriteClamdConf()` (clamd.conf) — keep the two in sync.
 The per-file/scan-size cap is user-controlled by the "skip large files"
 toggle (`chkSkipBig`, `skipbig=` in settings.ini, on by default): 200 MB when
 on, `0` = unlimited when off. The other limits (recursion, file count, and
-especially `--max-scantime=20000` — 20 s per object) always apply and are
+especially `--max-scantime=10000` — 10 s per object) always apply and are
 what keep even a multi-GB file from hanging a scan; don't remove them.
 
 ## Working rules — details live in `.claude/skills/`

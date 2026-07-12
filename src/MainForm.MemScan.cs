@@ -51,11 +51,14 @@ namespace ClamAVUI
             return s.Length == 0 ? "proc" : s;
         }
 
-        // Skip any single region larger than this. Kept modest: huge executable
-        // regions are almost always benign JIT/browser code, and dumping+scanning a
-        // ~100 MB blob wastes a clamd worker for up to the 20 s max-scantime.
-        const long MemMaxRegionBytes = 64L * 1024 * 1024;
-        const long MemMaxTotalBytes = 512L * 1024 * 1024;   // overall cap so a scan never fills the disk
+        // Skip any single region larger than this. Kept small on purpose: real
+        // injected/masked code (shellcode, beacons, reflectively-loaded DLLs) is
+        // almost always a few MB at most, while the big executable regions are benign
+        // JIT/browser code — and scanning a raw code blob is expensive per byte, so a
+        // few large ones dominate the whole quick scan. 16 MB covers the payloads that
+        // matter without making clamd chew tens of MB of harmless JIT.
+        const long MemMaxRegionBytes = 16L * 1024 * 1024;
+        const long MemMaxTotalBytes = 128L * 1024 * 1024;   // overall cap so a scan never fills the disk or dominates its time
 
         // Walks every accessible process' address space and dumps the qualifying
         // regions to memDumpDir. Runs on the background listing thread; honours the

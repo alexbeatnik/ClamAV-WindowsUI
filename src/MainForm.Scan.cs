@@ -69,7 +69,7 @@ namespace ClamAVUI
             string size = skipBig ? "200M" : "0"; // 0 = unlimited in ClamAV
             return " --max-filesize=" + size + " --max-scansize=" + size
                  + " --max-recursion=6 --max-files=5000"
-                 + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
+                 + " --max-scantime=10000"; // no more than 10s per object — a few heavy files (big archives, raw memory) used to eat 20s each and dominate a quick scan
         }
 
         // ---------- Scan performance (Settings → Low / Normal / High) ----------
@@ -553,6 +553,13 @@ namespace ClamAVUI
                     }
                     catch { }
                 }
+                // Smallest files first: fast, visible early progress; the few heavy
+                // files (which can each hit the per-object time limit) fall to the tail.
+                if (!cancelScanListing && files.Count > 1)
+                    SortPathsBySize(files, delegate(string p)
+                    {
+                        try { return new FileInfo(p).Length; } catch { return 0; }
+                    });
                 bool cancelled = cancelScanListing;
                 try
                 {
@@ -612,7 +619,7 @@ namespace ClamAVUI
                 "MaxThreads " + PerfMaxThreads(perfMode) + "\r\n" +
                 "DatabaseDirectory \"" + dbDir + "\"\r\n" +
                 "MaxScanSize " + size + "\r\nMaxFileSize " + size + "\r\nMaxRecursion 6\r\n" +
-                "MaxFiles 5000\r\nMaxScanTime 20000\r\n" +
+                "MaxFiles 5000\r\nMaxScanTime 10000\r\n" +
                 "IdleTimeout 300\r\nForeground yes\r\n",
                 new UTF8Encoding(false));
         }
@@ -829,6 +836,20 @@ namespace ClamAVUI
                         "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg(chkSkipBig.Checked)
                         + " --file-list=" + Quote(fullList), OnScanLine, OnScanExit);
                 });
+        }
+
+        // Sorts paths by size, smallest first, using a caller-supplied size lookup
+        // (so it's testable without touching the disk). Sizes are read once up front —
+        // never from inside the comparator — so it stays O(n log n), not O(n log n)
+        // stat calls. Combined with StripeFiles, each clamdscan process then scans
+        // small files first (fast, visible early progress) and the few heavy files
+        // (each capped at max-scantime) fall to the tail, where a slowing "finishing
+        // up" reads far better than a scan that sits at 0-7 % for minutes.
+        internal static void SortPathsBySize(List<string> files, Func<string, long> sizeOf)
+        {
+            var size = new Dictionary<string, long>(files.Count);
+            foreach (string f in files) if (!size.ContainsKey(f)) size[f] = sizeOf(f);
+            files.Sort(delegate(string a, string b) { return size[a].CompareTo(size[b]); });
         }
 
         // Distributes files round-robin across n buckets (stripe): file j goes to
