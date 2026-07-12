@@ -58,14 +58,15 @@ namespace ClamAVUI
             return chkQuarantine.Checked ? " --move=" + Quote(quarDir) : "";
         }
 
-        // Limits so clamscan doesn't bog down on deep archives. The per-file/scan
-        // size cap is user-controlled (the "skip large files" toggle): 2 GB when on,
-        // unlimited when off. The rest always apply — max-scantime caps time per
-        // object, so even a ~2 GB file can't hang the scan for minutes. (Before 0.0.9
-        // the cap was a fixed 50 MB.) Malware ClamAV catches is almost always small.
+        // Limits so clamscan doesn't bog down on large files and deep archives. The
+        // per-file/scan size cap is user-controlled (the "skip large files" toggle):
+        // 200 MB when on, unlimited when off. 200 MB scans typical installers, DLLs
+        // and archives while skipping the multi-hundred-MB files (VM images, media,
+        // caches) that dominate scan time — malware ClamAV catches is almost always
+        // small. The rest always apply; max-scantime caps time per object.
         internal static string ScanLimitsArg(bool skipBig)
         {
-            string size = skipBig ? "2000M" : "0"; // 0 = unlimited in ClamAV
+            string size = skipBig ? "200M" : "0"; // 0 = unlimited in ClamAV
             return " --max-filesize=" + size + " --max-scansize=" + size
                  + " --max-recursion=6 --max-files=5000"
                  + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
@@ -603,8 +604,8 @@ namespace ClamAVUI
 
         void WriteClamdConf()
         {
-            // same size cap as ScanLimitsArg: 2 GB when "skip large files" is on, else 0 = unlimited
-            string size = chkSkipBig.Checked ? "2000M" : "0";
+            // same size cap as ScanLimitsArg: 200 MB when "skip large files" is on, else 0 = unlimited
+            string size = chkSkipBig.Checked ? "200M" : "0";
             File.WriteAllText(Path.Combine(clamDir, "clamd.conf"),
                 "TCPSocket " + ClamdPort + "\r\n" +
                 "TCPAddr 127.0.0.1\r\n" +
@@ -786,12 +787,19 @@ namespace ClamAVUI
             var chunks = new List<string>();
             if (n > 1)
             {
-                int per = (files.Count + n - 1) / n;
-                for (int i = 0; i < n && i * per < files.Count; i++)
+                // Round-robin (stripe) the list across the N processes instead of
+                // handing each a contiguous block. The file list is ordered by the
+                // directory walk, so heavy folders (AppData\Local) and the memory
+                // dumps — all appended at the tail — would otherwise pile into the
+                // last chunk(s), collapsing parallelism to 1 core partway through.
+                // Striping gives every process an even mix, keeping all cores busy
+                // to the end (and smoothing the ETA).
+                var slices = StripeFiles(files, n);
+                for (int i = 0; i < n; i++)
                 {
-                    var slice = files.GetRange(i * per, Math.Min(per, files.Count - i * per));
+                    if (slices[i].Count == 0) continue;
                     string cp = Path.Combine(tmp, "clamui-list-" + (i + 1) + "-" + Guid.NewGuid().ToString("N") + ".txt");
-                    try { File.WriteAllLines(cp, slice.ToArray(), new UTF8Encoding(false)); }
+                    try { File.WriteAllLines(cp, slices[i].ToArray(), new UTF8Encoding(false)); }
                     catch { chunks.Clear(); break; } // failed — fall back to a single process
                     chunks.Add(cp);
                     batchListPaths.Add(cp);
@@ -821,6 +829,20 @@ namespace ClamAVUI
                         "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg(chkSkipBig.Checked)
                         + " --file-list=" + Quote(fullList), OnScanLine, OnScanExit);
                 });
+        }
+
+        // Distributes files round-robin across n buckets (stripe): file j goes to
+        // bucket j % n. The file list is ordered by the directory walk, so heavy
+        // folders and the appended memory dumps cluster at the tail; a contiguous
+        // split would dump all of that on one clamdscan process. Striping spreads it
+        // so every process finishes around the same time. Every file lands in exactly
+        // one bucket, order within a bucket preserved.
+        internal static List<List<string>> StripeFiles(List<string> files, int n)
+        {
+            var slices = new List<List<string>>(n);
+            for (int i = 0; i < n; i++) slices.Add(new List<string>());
+            for (int j = 0; j < files.Count; j++) slices[j % n].Add(files[j]);
+            return slices;
         }
 
         void StartClamdscanChunks(List<string> chunks)

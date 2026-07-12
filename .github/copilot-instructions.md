@@ -46,7 +46,7 @@ must not be "modernized" in suggestions or review comments:
 - **Scan limits**: `ScanLimitsArg(bool skipBig)` (clamscan) and
   `WriteClamdConf()` (clamd.conf) must stay in sync. The file/scan-size cap is
   user-controlled by the "skip large files" toggle (`chkSkipBig`, `skipbig=`,
-  default on): `2000M` when on, `0` = unlimited when off — don't flag the `0`
+  default on): `200M` when on, `0` = unlimited when off — don't flag the `0`
   as a bug. The other limits, especially `--max-scantime=20000` (20 s/object),
   must stay: they, not a size cap, are what prevent a huge file from hanging a
   scan.

@@ -41,9 +41,10 @@ anytime from Settings — no restart required.
   so the scanner doesn't waste time on gigabyte-sized videos and images;
   scanning **all** files can be enabled in Settings
 - **Skip large files**: a Settings toggle (on by default) caps the per-file
-  scan size at 2 GB so scans don't crawl through huge VM images and media;
-  turn it off to scan files of any size (a 20 s-per-object time limit keeps
-  even those from hanging the scan)
+  scan size at 200 MB so scans don't crawl through big installers, VM images
+  and media (malware ClamAV catches is almost always small); turn it off to
+  scan files of any size (a 20 s-per-object time limit keeps even those from
+  hanging the scan)
 - **clamd engine while scanning**: before a manual scan the app starts the
   `clamd` daemon (the database loads into memory once, ~20-30s), scans with
   several parallel `clamdscan` processes, and stops the daemon immediately

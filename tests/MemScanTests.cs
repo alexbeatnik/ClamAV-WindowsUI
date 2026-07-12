@@ -1,5 +1,6 @@
 // Tests for the process-memory-scan region predicate and dump-name sanitizer.
 using System;
+using System.Collections.Generic;
 using System.IO;
 using ClamAVUI;
 
@@ -59,6 +60,48 @@ namespace ClamAVUI.Tests
                 "exactly at the cap is still dumped");
             Assert.False(MainForm.ShouldDumpRegion(MEM_COMMIT, PAGE_EXECUTE_READWRITE, MEM_PRIVATE, 0, Cap),
                 "an empty region is skipped");
+        }
+
+        public static void TestStripeSpreadsFilesEvenly()
+        {
+            var files = new List<string>();
+            for (int i = 0; i < 10; i++) files.Add("f" + i);
+            var slices = MainForm.StripeFiles(files, 4);
+            Assert.Equal(4, slices.Count, "one bucket per process");
+            // 10 files over 4 buckets → sizes 3,3,2,2 (max-min <= 1, i.e. balanced)
+            Assert.Equal(3, slices[0].Count, "bucket 0 gets files 0,4,8");
+            Assert.Equal(3, slices[1].Count, "bucket 1 gets files 1,5,9");
+            Assert.Equal(2, slices[2].Count, "bucket 2 gets files 2,6");
+            Assert.Equal(2, slices[3].Count, "bucket 3 gets files 3,7");
+            Assert.Equal("f0", slices[0][0], "round-robin: bucket 0 first item is file 0");
+            Assert.Equal("f4", slices[0][1], "round-robin: bucket 0 second item is file 4");
+        }
+
+        public static void TestStripeKeepsEveryFileExactlyOnce()
+        {
+            var files = new List<string>();
+            for (int i = 0; i < 37; i++) files.Add("x" + i);
+            var slices = MainForm.StripeFiles(files, 4);
+            int total = 0;
+            var seen = new System.Collections.Generic.HashSet<string>();
+            foreach (var s in slices) foreach (var f in s) { total++; seen.Add(f); }
+            Assert.Equal(37, total, "no file dropped or duplicated");
+            Assert.Equal(37, seen.Count, "every file present exactly once");
+        }
+
+        public static void TestStripeTailIsDistributed()
+        {
+            // Mimics memory dumps appended at the tail: they must NOT all land in one bucket.
+            var files = new List<string>();
+            for (int i = 0; i < 100; i++) files.Add("disk" + i);
+            for (int i = 0; i < 8; i++) files.Add("mem" + i); // the appended dumps
+            var slices = MainForm.StripeFiles(files, 4);
+            foreach (var s in slices)
+            {
+                int mem = 0;
+                foreach (var f in s) if (f.StartsWith("mem")) mem++;
+                Assert.True(mem > 0, "each bucket gets at least one tail (memory-dump) file");
+            }
         }
 
         public static void TestSanitizeNameStripsInvalidChars()

@@ -122,8 +122,8 @@ namespace ClamAVUI.Tests
         public static void TestSkipBigCapsFileSize()
         {
             string on = MainForm.ScanLimitsArg(true);
-            Assert.True(on.Contains("--max-filesize=2000M"), "skip-big caps files at 2 GB");
-            Assert.True(on.Contains("--max-scansize=2000M"), "skip-big caps scan size at 2 GB");
+            Assert.True(on.Contains("--max-filesize=200M"), "skip-big caps files at 200 MB");
+            Assert.True(on.Contains("--max-scansize=200M"), "skip-big caps scan size at 200 MB");
         }
 
         public static void TestNoSkipBigMeansUnlimited()

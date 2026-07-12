@@ -51,7 +51,10 @@ namespace ClamAVUI
             return s.Length == 0 ? "proc" : s;
         }
 
-        const long MemMaxRegionBytes = 100L * 1024 * 1024;  // skip any single region larger than this
+        // Skip any single region larger than this. Kept modest: huge executable
+        // regions are almost always benign JIT/browser code, and dumping+scanning a
+        // ~100 MB blob wastes a clamd worker for up to the 20 s max-scantime.
+        const long MemMaxRegionBytes = 64L * 1024 * 1024;
         const long MemMaxTotalBytes = 512L * 1024 * 1024;   // overall cap so a scan never fills the disk
 
         // Walks every accessible process' address space and dumps the qualifying

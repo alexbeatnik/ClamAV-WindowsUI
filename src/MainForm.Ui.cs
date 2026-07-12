@@ -889,7 +889,7 @@ namespace ClamAVUI
             chkNotify.Checked = true;
             chkNotify.CheckedChanged += delegate { SaveSettings(); };
 
-            // caps the per-file scan size at 2 GB (see ScanLimitsArg/WriteClamdConf)
+            // caps the per-file scan size at 200 MB (see ScanLimitsArg/WriteClamdConf)
             chkSkipBig = MakeCheck(Lang.T("settings.skipBig"), 20, 344);
             chkSkipBig.Checked = true;
             chkSkipBig.CheckedChanged += delegate { SaveSettings(); };
