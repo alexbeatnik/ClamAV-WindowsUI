@@ -285,8 +285,11 @@ namespace ClamAVUI
             // Quick scan
             A("desc.quickScan", "quick scan", "швидке сканування");
             A("log.quickScanHeader", "Quick scan: risky file types in common infection points.\r\n", "Швидке сканування: небезпечні типи файлів у типових місцях зараження.\r\n");
-            A("log.quickScanProcesses", "  + executables of running processes\r\n\r\n", "  + виконувані файли запущених процесів\r\n\r\n");
+            A("log.quickScanProcesses", "  + executables of running processes\r\n", "  + виконувані файли запущених процесів\r\n");
+            A("log.quickScanMemory", "  + memory (RAM) of running processes — catches code masked on disk\r\n\r\n", "  + пам'ять (RAM) запущених процесів — ловить код, замаскований на диску\r\n\r\n");
             A("status.quickScanRunning", "Quick scan…", "Швидке сканування…");
+            A("status.memScanning", "Scanning process memory (RAM)…", "Сканую пам'ять процесів (RAM)…");
+            A("log.memScanDone", "Dumped {0} executable memory region(s) from {1} process(es) ({2}) for scanning.\r\n", "Знято {0} виконуваних ділянок пам'яті з {1} процесів ({2}) для перевірки.\r\n");
 
             // File listing
             A("status.buildingListFound", "Building file list… found {0}", "Складаю список файлів… знайдено {0}");

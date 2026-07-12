@@ -386,10 +386,11 @@ namespace ClamAVUI
             AppendLog(Lang.T("log.quickScanHeader"), Theme.Text, "SCAN", false);
             foreach (string r in roots) AppendLog("  " + r + "\r\n", Theme.Muted, null, true);
             AppendLog(Lang.T("log.quickScanProcesses"), Theme.Muted, null, true);
+            AppendLog(Lang.T("log.quickScanMemory"), Theme.Muted, null, true);
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             roots.AddRange(RunningProcessFiles());
             SetBusy(true, Lang.T("status.quickScanRunning"));
-            BeginListScan(roots, true);
+            BeginListScan(roots, true, true);
         }
 
         // Common places malware ends up. Nested paths are merged so the same
@@ -455,6 +456,11 @@ namespace ClamAVUI
         // on gigabyte-sized videos/images, and progress knows the exact workload upfront.
         void BeginListScan(List<string> roots, bool riskyOnly)
         {
+            BeginListScan(roots, riskyOnly, false);
+        }
+
+        void BeginListScan(List<string> roots, bool riskyOnly, bool dumpMemory)
+        {
             int gen = ++countGen;
             cancelScanListing = false;
             listedCount = 0;
@@ -514,6 +520,34 @@ namespace ClamAVUI
                         catch { }
                     }
                 }
+                // Dump running processes' executable RAM (injected/masked code) and
+                // add those temp files to the scan — done after the disk walk so the
+                // slow part reports its own status line.
+                if (dumpMemory && !cancelScanListing && gen == countGen)
+                {
+                    try
+                    {
+                        BeginInvoke((Action)delegate
+                        {
+                            if (gen == countGen) statusLabel.Text = Lang.T("status.memScanning");
+                        });
+                    }
+                    catch { }
+                    int mp, mr; long mb;
+                    foreach (string f in DumpRunningProcessMemory(out mp, out mr, out mb))
+                        if (seen.Add(f)) files.Add(f);
+                    int fMp = mp, fMr = mr; long fMb = mb;
+                    try
+                    {
+                        BeginInvoke((Action)delegate
+                        {
+                            if (gen == countGen)
+                                AppendLog(string.Format(Lang.T("log.memScanDone"),
+                                    fMr, fMp, FormatSize(fMb)), Theme.Muted, "SCAN", false);
+                        });
+                    }
+                    catch { }
+                }
                 bool cancelled = cancelScanListing;
                 try
                 {
@@ -527,6 +561,7 @@ namespace ClamAVUI
                             SetBusy(false, Lang.T("status.scanCancelled"));
                             AppendLog(Lang.T("log.cancelled"), Theme.Warn);
                             RefreshDbStatus();
+                            CleanupMemDumps();
                             return;
                         }
                         if (files.Count == 0)
@@ -535,6 +570,7 @@ namespace ClamAVUI
                             SetBusy(false, Lang.T("status.noFiles"));
                             AppendLog(Lang.T("log.noFiles"), Theme.Text);
                             RefreshDbStatus();
+                            CleanupMemDumps();
                             return;
                         }
                         totalToScan = files.Count;
@@ -725,6 +761,7 @@ namespace ClamAVUI
                 SetBusy(false, Lang.T("status.listCreateFailed"));
                 AppendLog(string.Format(Lang.T("log.listCreateFailed"), ex.Message), Theme.Danger);
                 RefreshDbStatus();
+                CleanupMemDumps();
                 return;
             }
 
@@ -771,6 +808,7 @@ namespace ClamAVUI
                         AppendLog(Lang.T("log.cancelled"), Theme.Warn);
                         RefreshDbStatus();
                         CleanupBatchLists();
+                        CleanupMemDumps();
                         return;
                     }
                     AppendLog(string.Format(Lang.T("log.daemonFallback"), msg), Theme.Warn);
@@ -1002,6 +1040,7 @@ namespace ClamAVUI
                 statusLabel.Text = string.Format(Lang.T("status.scanInterrupted"), exitCode);
                 RefreshDbStatus();
             }
+            CleanupMemDumps(); // after the (modal) threat dialog, so found dumps stayed listable
             // New files may have appeared while the scan was running
             if (pendingFiles.Count > 0) { debounceTimer.Stop(); debounceTimer.Start(); }
         }

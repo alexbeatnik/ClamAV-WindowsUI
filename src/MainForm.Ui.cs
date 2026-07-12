@@ -1505,6 +1505,7 @@ namespace ClamAVUI
             StopWatchers();
             StopCurrent();
             KillClamdNow(); // synchronous: the async StopClamd worker wouldn't survive process exit
+            CleanupMemDumps(); // remove any RAM dumps from an in-flight scan
             tray.Visible = false;
         }
 
