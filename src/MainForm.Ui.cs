@@ -889,21 +889,26 @@ namespace ClamAVUI
             chkNotify.Checked = true;
             chkNotify.CheckedChanged += delegate { SaveSettings(); };
 
+            // caps the per-file scan size at 2 GB (see ScanLimitsArg/WriteClamdConf)
+            chkSkipBig = MakeCheck(Lang.T("settings.skipBig"), 20, 344);
+            chkSkipBig.Checked = true;
+            chkSkipBig.CheckedChanged += delegate { SaveSettings(); };
+
             langLabel = new Label();
             langLabel.Text = Lang.T("settings.language");
             langLabel.AutoSize = true;
             langLabel.ForeColor = Theme.Text;
             langLabel.BackColor = Theme.Card;
-            langLabel.Location = new Point(20, 358);
+            langLabel.Location = new Point(20, 394);
             btnLangEn = MakeButton("English", 90, Theme.Btn, Theme.BtnHot);
             btnLangEn.TextColor = Theme.BtnText;
             btnLangEn.BackColor = Theme.Card;
-            btnLangEn.SetBounds(180, 352, 90, 30);
+            btnLangEn.SetBounds(180, 388, 90, 30);
             btnLangEn.Click += delegate { SetLanguage(Lang.Language.English); };
             btnLangUk = MakeButton("Українська", 110, Theme.Btn, Theme.BtnHot);
             btnLangUk.TextColor = Theme.BtnText;
             btnLangUk.BackColor = Theme.Card;
-            btnLangUk.SetBounds(276, 352, 110, 30);
+            btnLangUk.SetBounds(276, 388, 110, 30);
             btnLangUk.Click += delegate { SetLanguage(Lang.Language.Ukrainian); };
             UpdateLangButtons();
 
@@ -990,7 +995,7 @@ namespace ClamAVUI
 
             btnInstall = MakeLightButton(Lang.T("btn.installPF"), Ico.Download);
             btnInstall.BackColor = Theme.Card;
-            btnInstall.SetBounds(20, 398, 290, 30);
+            btnInstall.SetBounds(20, 434, 290, 30);
             btnInstall.Visible = !IsInstalled;
             btnInstall.Click += delegate
             {
@@ -1007,7 +1012,7 @@ namespace ClamAVUI
             installedBadge.ForeColor = Theme.Good;
             installedBadge.BackColor = Theme.Card;
             installedBadge.AutoSize = true;
-            installedBadge.Location = new Point(20, 404);
+            installedBadge.Location = new Point(20, 440);
             installedBadge.Visible = IsInstalled;
             cardSettingsPanel.Controls.Add(installedBadge);
 
@@ -1015,7 +1020,7 @@ namespace ClamAVUI
             // (via this button, or automatically after --install elevates and fixes it).
             btnFixWinTemp = MakeLightButton(Lang.T("btn.fixWinTemp"), Ico.Unlock);
             btnFixWinTemp.BackColor = Theme.Card;
-            btnFixWinTemp.SetBounds(20, 436, 290, 30);
+            btnFixWinTemp.SetBounds(20, 472, 290, 30);
             btnFixWinTemp.Visible = !CanWatchDirectory(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             btnFixWinTemp.Click += delegate { FixWinTempAccess(); };
@@ -1023,7 +1028,7 @@ namespace ClamAVUI
             // About: description, quick-start steps, and project links (star / releases / follow)
             btnAbout = MakeLightButton(Lang.T("btn.about"), Ico.Info);
             btnAbout.BackColor = Theme.Card;
-            btnAbout.SetBounds(20, 474, 290, 30);
+            btnAbout.SetBounds(20, 510, 290, 30);
             btnAbout.Click += delegate { ShowAboutDialog(); };
 
             cardSettingsPanel.Controls.Add(chkMonitor);
@@ -1035,6 +1040,7 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(chkAutostart);
             cardSettingsPanel.Controls.Add(chkUsbPrompt);
             cardSettingsPanel.Controls.Add(chkNotify);
+            cardSettingsPanel.Controls.Add(chkSkipBig);
             cardSettingsPanel.Controls.Add(langLabel);
             cardSettingsPanel.Controls.Add(btnLangEn);
             cardSettingsPanel.Controls.Add(btnLangUk);
@@ -1445,6 +1451,7 @@ namespace ClamAVUI
             chkAutostart.Text = Lang.T("settings.autostart");
             chkUsbPrompt.Text = Lang.T("settings.usbPrompt");
             chkNotify.Text = Lang.T("settings.notifications");
+            chkSkipBig.Text = Lang.T("settings.skipBig");
             UpdateMonitorLabel();
             langLabel.Text = Lang.T("settings.language");
             UpdateLangButtons();

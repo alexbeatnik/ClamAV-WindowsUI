@@ -386,7 +386,7 @@ namespace ClamAVUI
             // Paths are passed via --file-list: hundreds of files on the command line
             // (e.g. installing to Program Files) exceed the ~32K character limit and Process.Start fails
             var args = new StringBuilder();
-            args.Append("-r --stdout -d ").Append(Quote(dbDir)).Append(MoveArg()).Append(ExcludeArg()).Append(ScanLimitsArg());
+            args.Append("-r --stdout -d ").Append(Quote(dbDir)).Append(MoveArg()).Append(ExcludeArg()).Append(ScanLimitsArg(chkSkipBig.Checked));
             try
             {
                 string lp = Path.Combine(Path.GetTempPath(), "clamui-batch-" + Guid.NewGuid().ToString("N") + ".txt");

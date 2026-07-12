@@ -58,12 +58,16 @@ namespace ClamAVUI
             return chkQuarantine.Checked ? " --move=" + Quote(quarDir) : "";
         }
 
-        // Limits so clamscan doesn't bog down on gigabyte-sized files and deep archives —
-        // those used to make a full scan "hang" on a single file for minutes. Malware that
-        // ClamAV catches is almost always small, so this barely affects detection.
-        internal static string ScanLimitsArg()
+        // Limits so clamscan doesn't bog down on deep archives. The per-file/scan
+        // size cap is user-controlled (the "skip large files" toggle): 2 GB when on,
+        // unlimited when off. The rest always apply — max-scantime caps time per
+        // object, so even a ~2 GB file can't hang the scan for minutes. (Before 0.0.9
+        // the cap was a fixed 50 MB.) Malware ClamAV catches is almost always small.
+        internal static string ScanLimitsArg(bool skipBig)
         {
-            return " --max-filesize=50M --max-scansize=100M --max-recursion=6 --max-files=5000"
+            string size = skipBig ? "2000M" : "0"; // 0 = unlimited in ClamAV
+            return " --max-filesize=" + size + " --max-scansize=" + size
+                 + " --max-recursion=6 --max-files=5000"
                  + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
         }
 
@@ -599,13 +603,14 @@ namespace ClamAVUI
 
         void WriteClamdConf()
         {
+            // same size cap as ScanLimitsArg: 2 GB when "skip large files" is on, else 0 = unlimited
+            string size = chkSkipBig.Checked ? "2000M" : "0";
             File.WriteAllText(Path.Combine(clamDir, "clamd.conf"),
                 "TCPSocket " + ClamdPort + "\r\n" +
                 "TCPAddr 127.0.0.1\r\n" +
                 "MaxThreads " + PerfMaxThreads(perfMode) + "\r\n" +
                 "DatabaseDirectory \"" + dbDir + "\"\r\n" +
-                // same limits as ScanLimitsArg uses for clamscan
-                "MaxScanSize 100M\r\nMaxFileSize 50M\r\nMaxRecursion 6\r\n" +
+                "MaxScanSize " + size + "\r\nMaxFileSize " + size + "\r\nMaxRecursion 6\r\n" +
                 "MaxFiles 5000\r\nMaxScanTime 20000\r\n" +
                 "IdleTimeout 300\r\nForeground yes\r\n",
                 new UTF8Encoding(false));
@@ -770,7 +775,7 @@ namespace ClamAVUI
             if (!haveDaemon)
             {
                 StartProcess(Path.Combine(clamDir, "clamscan.exe"),
-                    "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg()
+                    "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg(chkSkipBig.Checked)
                     + " --file-list=" + Quote(fullList), OnScanLine, OnScanExit);
                 return;
             }
@@ -813,7 +818,7 @@ namespace ClamAVUI
                     }
                     AppendLog(string.Format(Lang.T("log.daemonFallback"), msg), Theme.Warn);
                     StartProcess(Path.Combine(clamDir, "clamscan.exe"),
-                        "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg()
+                        "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg(chkSkipBig.Checked)
                         + " --file-list=" + Quote(fullList), OnScanLine, OnScanExit);
                 });
         }
