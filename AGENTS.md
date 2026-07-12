@@ -44,6 +44,7 @@ One `MainForm` class split into partial files by concern:
 | `src/MainForm.cs` | state fields, `Main()`, process plumbing, log rendering, autostart |
 | `src/MainForm.Ui.cs` | all UI construction, pages, dialogs, `ApplyLanguage()` |
 | `src/MainForm.Scan.cs` | scans, progress/ETA, clamd engine, scheduled quick scan |
+| `src/MainForm.MemScan.cs` | quick-scan process-memory dumping (RAM regions → temp files → clamd) |
 | `src/MainForm.Updates.cs` | DB updates, ClamAV download, app self-update |
 | `src/MainForm.Settings.cs` | locating ClamAV, `settings.ini` load/save |
 | `src/MainForm.Quarantine.cs` | neutralized `.quar` storage, index, threat dialog |
@@ -57,6 +58,14 @@ UI is built in code; the settings card uses absolute positions. All state
 lives on the UI thread — background work goes through `ThreadPool`/threads
 and marshals back with `BeginInvoke` (wrapped in `try/catch` for the
 form-already-closed case). Child processes set `SynchronizingObject = this`.
+
+Quick scan also dumps running processes' executable RAM (`MainForm.MemScan.cs`):
+best-effort `OpenProcess`/`VirtualQueryEx`/`ReadProcessMemory` P/Invoke on the
+background listing thread, writing the executable non-image regions to a temp
+folder so clamd scans code that is masked or absent on disk. Inaccessible
+(protected / higher-integrity) processes are silently skipped; dumps are
+capped (per-region and total) and cleaned up on every scan-exit path and on
+form close (`CleanupMemDumps`).
 
 ## Working rules — details live in `.claude/skills/`
 

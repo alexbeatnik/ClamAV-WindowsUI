@@ -22,6 +22,11 @@ must not be "modernized" in suggestions or review comments:
   code in `src/Icons.cs`).
 - The settings page uses absolute pixel positions by design.
 - UI strings live in `src/Lang.cs`, built in code — no resx, no designer.
+- Quick scan reads other processes' memory via `kernel32` P/Invoke
+  (`OpenProcess`/`VirtualQueryEx`/`ReadProcessMemory` in `src/MainForm.MemScan.cs`)
+  to scan executable RAM regions — this is intentional (malware detection),
+  best-effort, and runs non-elevated: failing to open a protected process is
+  expected and swallowed, not a bug.
 
 ## What TO check in review
 
