@@ -593,8 +593,13 @@ namespace ClamAVUI
         internal static void PromoteExtractedFolder(string src, string dst)
         {
             string old = dst + "-old";
-            if (Directory.Exists(old)) Directory.Delete(old, true); // leftover from an interrupted install
-            if (Directory.Exists(dst)) Directory.Move(dst, old);
+            if (Directory.Exists(dst))
+            {
+                if (Directory.Exists(old)) Directory.Delete(old, true); // stale leftover from an interrupted install
+                Directory.Move(dst, old);
+            }
+            // else: a previous run died between the two moves and old (if present)
+            // is the only working install — keep it as the rollback copy below
             try { Directory.Move(src, dst); }
             catch
             {

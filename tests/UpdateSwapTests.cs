@@ -101,6 +101,37 @@ namespace ClamAVUI.Tests
             }
         }
 
+        // A previous update died between the two moves: dst is gone and the only
+        // working install sits under the -old name. It must never be deleted
+        // before the new one is in place.
+        public static void TestOrphanedOldInstallSurvivesAFailedRetry()
+        {
+            using (var tmp = new TempDir())
+            {
+                MakeInstall(tmp, "clamav-old", "last working scanner");
+                string src = tmp.File("extracted"); // never created
+                string dst = tmp.File("clamav");    // missing: crash happened after dst -> -old
+                Assert.Throws<DirectoryNotFoundException>(
+                    delegate { MainForm.PromoteExtractedFolder(src, dst); },
+                    "promoting a missing folder fails");
+                Assert.Equal("last working scanner", File.ReadAllText(Path.Combine(dst, "clamscan.exe")),
+                    "the orphaned -old install is restored to the live path, not deleted");
+            }
+        }
+
+        public static void TestOrphanedOldInstallIsReplacedOnASuccessfulRetry()
+        {
+            using (var tmp = new TempDir())
+            {
+                MakeInstall(tmp, "clamav-old", "last working scanner");
+                string src = MakeInstall(tmp, "extracted", "new scanner");
+                string dst = tmp.File("clamav"); // missing: crash happened after dst -> -old
+                MainForm.PromoteExtractedFolder(src, dst);
+                Assert.Equal("new scanner", File.ReadAllText(Path.Combine(dst, "clamscan.exe")), "retry installs the new scanner");
+                Assert.False(Directory.Exists(dst + "-old"), "the orphaned -old copy is cleaned up after success");
+            }
+        }
+
         public static void TestStaleOldFolderFromInterruptedInstallIsReplaced()
         {
             using (var tmp = new TempDir())
