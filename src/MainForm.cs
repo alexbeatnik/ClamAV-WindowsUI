@@ -63,6 +63,16 @@ namespace ClamAVUI
         // Exclusions: paths that are not scanned
         readonly List<string> exclusions = new List<string>();
 
+        // Windows paths are case-insensitive: "C:\Temp" and "c:\temp" are the
+        // same folder, and storing both means duplicate watchers and repeated
+        // monitor scans. Every watch/exclusion addition goes through here.
+        internal static void AddPathOnce(List<string> list, string path)
+        {
+            foreach (string p in list)
+                if (string.Equals(p, path, StringComparison.OrdinalIgnoreCase)) return;
+            list.Add(path);
+        }
+
         // New-file monitoring
         readonly List<string> watchDirs = new List<string>();
         readonly List<FileSystemWatcher> watchers = new List<FileSystemWatcher>();

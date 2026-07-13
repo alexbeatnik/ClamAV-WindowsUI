@@ -50,4 +50,100 @@ namespace ClamAVUI.Tests
             }
         }
     }
+
+    // PromoteExtractedFolder must never leave a moment where the old clamav
+    // folder is gone and the new one is not yet in place.
+    static class PromoteExtractedFolderTests
+    {
+        static string MakeInstall(TempDir tmp, string name, string marker)
+        {
+            string dir = tmp.File(name);
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "clamscan.exe"), marker);
+            return dir;
+        }
+
+        public static void TestMovesWhenDestinationMissing()
+        {
+            using (var tmp = new TempDir())
+            {
+                string src = MakeInstall(tmp, "extracted", "new scanner");
+                string dst = tmp.File("clamav");
+                MainForm.PromoteExtractedFolder(src, dst);
+                Assert.Equal("new scanner", File.ReadAllText(Path.Combine(dst, "clamscan.exe")), "extracted folder lands at dest");
+                Assert.False(Directory.Exists(src), "the source folder is consumed");
+            }
+        }
+
+        public static void TestReplacesExistingInstall()
+        {
+            using (var tmp = new TempDir())
+            {
+                string src = MakeInstall(tmp, "extracted", "new scanner");
+                string dst = MakeInstall(tmp, "clamav", "old scanner");
+                MainForm.PromoteExtractedFolder(src, dst);
+                Assert.Equal("new scanner", File.ReadAllText(Path.Combine(dst, "clamscan.exe")), "existing install is replaced");
+                Assert.False(Directory.Exists(dst + "-old"), "the old install copy is cleaned up");
+            }
+        }
+
+        public static void TestFailedPromoteKeepsTheExistingInstall()
+        {
+            using (var tmp = new TempDir())
+            {
+                string src = tmp.File("extracted"); // never created
+                string dst = MakeInstall(tmp, "clamav", "old scanner");
+                Assert.Throws<DirectoryNotFoundException>(
+                    delegate { MainForm.PromoteExtractedFolder(src, dst); },
+                    "promoting a missing folder fails");
+                Assert.Equal("old scanner", File.ReadAllText(Path.Combine(dst, "clamscan.exe")), "the working install survives a failed swap");
+                Assert.False(Directory.Exists(dst + "-old"), "the rolled-back install does not linger under the -old name");
+            }
+        }
+
+        public static void TestStaleOldFolderFromInterruptedInstallIsReplaced()
+        {
+            using (var tmp = new TempDir())
+            {
+                MakeInstall(tmp, "clamav-old", "stale leftover");
+                string src = MakeInstall(tmp, "extracted", "new scanner");
+                string dst = MakeInstall(tmp, "clamav", "old scanner");
+                MainForm.PromoteExtractedFolder(src, dst);
+                Assert.Equal("new scanner", File.ReadAllText(Path.Combine(dst, "clamscan.exe")), "swap works despite a stale -old folder");
+                Assert.False(Directory.Exists(dst + "-old"), "the stale -old folder is gone");
+            }
+        }
+    }
+
+    // Watch/exclusion lists live on a case-insensitive filesystem: adding
+    // "c:\temp" when "C:\Temp" is already stored must not create a duplicate
+    // (duplicate watchers, repeated monitor scans).
+    static class AddPathOnceTests
+    {
+        public static void TestAddsNewPaths()
+        {
+            var list = new System.Collections.Generic.List<string>();
+            MainForm.AddPathOnce(list, @"C:\Temp");
+            MainForm.AddPathOnce(list, @"C:\Users\a\Downloads");
+            Assert.Equal(2, list.Count, "distinct paths are both stored");
+        }
+
+        public static void TestExactDuplicateIsIgnored()
+        {
+            var list = new System.Collections.Generic.List<string>();
+            MainForm.AddPathOnce(list, @"C:\Temp");
+            MainForm.AddPathOnce(list, @"C:\Temp");
+            Assert.Equal(1, list.Count, "exact duplicate is not stored twice");
+        }
+
+        public static void TestCaseVariantIsIgnored()
+        {
+            var list = new System.Collections.Generic.List<string>();
+            MainForm.AddPathOnce(list, @"C:\Temp");
+            MainForm.AddPathOnce(list, @"c:\temp");
+            MainForm.AddPathOnce(list, @"C:\TEMP");
+            Assert.Equal(1, list.Count, "case variants of the same path collapse to one entry");
+            Assert.Equal(@"C:\Temp", list[0], "the first-seen spelling is kept");
+        }
+    }
 }

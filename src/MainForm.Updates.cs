@@ -269,8 +269,7 @@ namespace ClamAVUI
                 string dst = Path.Combine(baseDir, "clamav");
                 if (!File.Exists(Path.Combine(src, "clamscan.exe")))
                     throw new Exception(Lang.T("err.noClamscanInArchive"));
-                if (Directory.Exists(dst)) Directory.Delete(dst, true);
-                Directory.Move(src, dst);
+                PromoteExtractedFolder(src, dst);
                 if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
                 File.Delete(zipPath);
             }
@@ -584,6 +583,26 @@ namespace ClamAVUI
         {
             if (File.Exists(dest)) File.Replace(part, dest, null);
             else File.Move(part, dest);
+        }
+
+        // Same loss-safety rule for the extracted ClamAV folder. Directories
+        // have no ReplaceFile, so: rename the old install aside, move the new
+        // one in, drop the old. A lock/AV/disk failure at any step leaves the
+        // old working install in place (or rolls it back) — never Delete+Move,
+        // which would destroy the scanner before the replacement is in place.
+        internal static void PromoteExtractedFolder(string src, string dst)
+        {
+            string old = dst + "-old";
+            if (Directory.Exists(old)) Directory.Delete(old, true); // leftover from an interrupted install
+            if (Directory.Exists(dst)) Directory.Move(dst, old);
+            try { Directory.Move(src, dst); }
+            catch
+            {
+                if (Directory.Exists(old) && !Directory.Exists(dst))
+                    try { Directory.Move(old, dst); } catch { }
+                throw;
+            }
+            try { if (Directory.Exists(old)) Directory.Delete(old, true); } catch { }
         }
 
         // Thread-safe logging from a background thread

@@ -63,7 +63,7 @@ namespace ClamAVUI
                 statusLabel.Text = Lang.T("status.fixWinTempFailed");
                 return;
             }
-            if (!watchDirs.Contains(winTemp)) watchDirs.Add(winTemp);
+            AddPathOnce(watchDirs, winTemp);
             UpdateMonitorLabel();
             SaveSettings();
             if (chkMonitor.Checked) StartWatchers();
@@ -254,7 +254,7 @@ namespace ClamAVUI
                         AppendLog(string.Format(Lang.T("log.pathNotFound"), d), Theme.Warn);
                         continue;
                     }
-                    if (!target.Contains(d)) target.Add(d);
+                    AddPathOnce(target, d);
                 }
                 return true;
             }

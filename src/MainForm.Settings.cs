@@ -171,20 +171,25 @@ namespace ClamAVUI
             bool monitor = false, quarantine = false, autoUpdate = true, riskyOnly = true, fullRisky = true;
             bool usbPrompt = true, logDetails = false, notify = true, skipBig = true;
             bool hadSettings = File.Exists(settingsPath), modeAskedSeen = false;
+            // an unreadable/corrupt settings.ini must not take down startup:
+            // fall back to defaults; SaveSettings() at the end rewrites the file
+            string[] lines = null;
             if (hadSettings)
+                try { lines = File.ReadAllLines(settingsPath); } catch { }
+            if (lines != null)
             {
-                foreach (string line in File.ReadAllLines(settingsPath))
+                foreach (string line in lines)
                 {
                     string t = line.Trim();
                     if (t.StartsWith("watch=", StringComparison.OrdinalIgnoreCase))
                     {
                         string d = t.Substring(6).Trim();
-                        if (d.Length > 0 && !watchDirs.Contains(d)) watchDirs.Add(d);
+                        if (d.Length > 0) AddPathOnce(watchDirs, d);
                     }
                     else if (t.StartsWith("exclude=", StringComparison.OrdinalIgnoreCase))
                     {
                         string d = t.Substring(8).Trim();
-                        if (d.Length > 0 && !exclusions.Contains(d)) exclusions.Add(d);
+                        if (d.Length > 0) AddPathOnce(exclusions, d);
                     }
                     else if (t == "monitor=1") monitor = true;
                     else if (t == "quarantine=1") quarantine = true;
@@ -255,7 +260,7 @@ namespace ClamAVUI
             {
                 watchInitialized = true;
                 foreach (string d in DefaultWatchDirs())
-                    if (!watchDirs.Contains(d)) watchDirs.Add(d);
+                    AddPathOnce(watchDirs, d);
                 monitor = true;
             }
             else if (!watchDefaultsV2)
@@ -263,7 +268,7 @@ namespace ClamAVUI
                 // migrating older settings: add only the new folders (Temp, Roaming)
                 // once, without restoring anything the user has since removed
                 foreach (string d in TempWatchDirs())
-                    if (!watchDirs.Contains(d)) watchDirs.Add(d);
+                    AddPathOnce(watchDirs, d);
             }
             if (!watchDefaultsV3)
             {
@@ -273,14 +278,14 @@ namespace ClamAVUI
                 // actually watchable (stock Windows default, or already fixed via
                 // --install / the "Fix" button), drop it otherwise.
                 string winTemp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp");
-                if (CanWatchDirectory(winTemp)) { if (!watchDirs.Contains(winTemp)) watchDirs.Add(winTemp); }
+                if (CanWatchDirectory(winTemp)) AddPathOnce(watchDirs, winTemp);
                 else watchDirs.RemoveAll(delegate(string d) { return string.Equals(d, winTemp, StringComparison.OrdinalIgnoreCase); });
             }
             watchDefaultsV2 = true;
             watchDefaultsV3 = true;
             if (watchDirs.Count == 0)
                 foreach (string d in DefaultWatchDirs())
-                    if (!watchDirs.Contains(d)) watchDirs.Add(d);
+                    AddPathOnce(watchDirs, d);
             chkQuarantine.Checked = quarantine;
             chkAutoUpdate.Checked = autoUpdate;
             chkRiskyOnly.Checked = riskyOnly;
