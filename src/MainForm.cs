@@ -92,8 +92,8 @@ namespace ClamAVUI
         };
 
         // UI
-        ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog, btnClearLog;
-        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp, btnAbout;
+        ModernButton btnStop, btnUpdate, btnWatchDirs, btnScanLog, btnClearLog;
+        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, dashScanRam, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp, btnAbout;
         ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
         Label perfLabel, perfHint;
         ModernButton btnSchedOff, btnSchedDaily, btnSchedWeekly;

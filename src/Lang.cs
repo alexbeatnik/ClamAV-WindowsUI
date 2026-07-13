@@ -72,10 +72,10 @@ namespace ClamAVUI
             A("btn.scanFolderSub", "Scan any directory", "Перевірити будь-яку папку");
             A("btn.scanAll", "FULL PC", "ВЕСЬ ПК");
             A("btn.scanAllSub", "All local drives", "Усі локальні диски");
-            A("btn.quarantineSub", "Isolated threats", "Ізольовані загрози");
+            A("btn.scanRam", "SCAN RAM", "СКАН RAM");
+            A("btn.scanRamSub", "Running processes' memory", "Пам'ять запущених процесів");
             A("btn.updateDb", "UPDATE DATABASE", "ОНОВИТИ БАЗИ");
             A("btn.openLog", "OPEN LOG FILE", "ВІДКРИТИ ФАЙЛ ЖУРНАЛУ");
-            A("btn.openQuarantine", "OPEN QUARANTINE", "ВІДКРИТИ КАРАНТИН");
             A("btn.exclusions", "MANAGE EXCLUSIONS…", "КЕРУВАТИ ВИКЛЮЧЕННЯМИ…");
             A("btn.quick", "QUICK", "ШВИДКИЙ");
             A("btn.file", "FILE", "ФАЙЛ");
@@ -289,6 +289,9 @@ namespace ClamAVUI
             A("log.quickScanProcesses", "  + executables of running processes\r\n", "  + виконувані файли запущених процесів\r\n");
             A("log.quickScanMemory", "  + memory (RAM) of running processes — catches code masked on disk\r\n\r\n", "  + пам'ять (RAM) запущених процесів — ловить код, замаскований на диску\r\n\r\n");
             A("status.quickScanRunning", "Quick scan…", "Швидке сканування…");
+            A("desc.memScan", "RAM scan", "скан пам'яті");
+            A("log.memScanHeader", "RAM scan: executable memory of every running process.\r\n", "Скан RAM: виконувана пам'ять кожного запущеного процесу.\r\n");
+            A("status.memScanRunning", "Scanning RAM…", "Сканую RAM…");
             A("status.memScanning", "Scanning process memory (RAM)…", "Сканую пам'ять процесів (RAM)…");
             A("log.memScanDone", "Dumped {0} executable memory region(s) from {1} process(es) ({2}) for scanning.\r\n", "Знято {0} виконуваних ділянок пам'яті з {1} процесів ({2}) для перевірки.\r\n");
 

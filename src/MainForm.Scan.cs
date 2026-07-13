@@ -357,9 +357,25 @@ namespace ClamAVUI
             ClearLog();
             AppendSection(Lang.T("title.fullScan"));
             AppendLog(string.Format(risky ? Lang.T("log.fullScanRisky") : Lang.T("log.fullScanAll"), drives), Theme.Text, "SCAN", false);
+            AppendLog(Lang.T("log.quickScanMemory"), Theme.Muted, null, true); // full scan also dumps process RAM
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             SetBusy(true, Lang.T("status.fullScanRunning"));
-            BeginListScan(targets, risky);
+            BeginListScan(targets, risky, true);
+        }
+
+        // RAM-only scan: dumps the executable memory of every running process and
+        // scans just those — no disk walk. Catches injected/unpacked code that's
+        // masked or absent on disk, in seconds rather than a full file scan.
+        void RunMemoryScan()
+        {
+            if (scanRunning || updateRunning || clamDir == null || !DbExists()) return;
+            ResetScanState(Lang.T("desc.memScan"));
+            ClearLog();
+            AppendSection(Lang.T("btn.scanRam"));
+            AppendLog(Lang.T("log.memScanHeader"), Theme.Text, "SCAN", false);
+            AppendLog(Lang.T("log.buildingList"), Theme.Muted);
+            SetBusy(true, Lang.T("status.memScanRunning"));
+            BeginListScan(new List<string>(), true, true); // no disk roots — memory only
         }
 
         // Shared counter reset before a manual scan

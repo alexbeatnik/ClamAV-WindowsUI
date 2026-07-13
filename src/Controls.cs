@@ -21,7 +21,6 @@ namespace ClamAVUI
         public IconDraw Icon;   // optional glyph; null = text-only button
         public bool CardStyle;  // icon centered above the text, for the big dashboard actions
         public string SubText;  // muted one-line caption under the label (card-style tiles only)
-        public int Badge;       // red counter bubble over the icon corner (0 = hidden)
         bool over, down;
         DialogResult dialogResult = DialogResult.None;
 
@@ -92,21 +91,6 @@ namespace ClamAVUI
                 float iconSize = Math.Min(Width * 0.30f, Height * 0.36f);
                 var iconRect = new RectangleF((Width - iconSize) / 2f, Height * 0.16f, iconSize, iconSize);
                 Icon(g, iconRect, fg);
-                if (Badge > 0)
-                {
-                    string txt = Badge > 99 ? "99+" : Badge.ToString();
-                    using (var bf = new Font("Segoe UI Semibold", 7.5f))
-                    {
-                        Size ts = TextRenderer.MeasureText(g, txt, bf);
-                        float bw = Math.Max(17f, ts.Width + 6f);
-                        var br = new RectangleF(iconRect.Right - bw * 0.35f, iconRect.Top - 7f, bw, 17f);
-                        using (var path = Theme.Round(br, 8.5f))
-                        using (var bb = new SolidBrush(Theme.Danger))
-                            g.FillPath(bb, path);
-                        TextRenderer.DrawText(g, txt, bf, Rectangle.Round(br), Color.White,
-                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
-                    }
-                }
                 int textTop = (int)(iconRect.Bottom + 10);
                 if (string.IsNullOrEmpty(SubText))
                 {

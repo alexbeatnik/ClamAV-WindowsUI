@@ -93,6 +93,28 @@ namespace ClamAVUI
                 }
         }
 
+        // Memory chip with pins — RAM / process-memory scan
+        public static void Memory(Graphics g, RectangleF r, Color c)
+        {
+            float w = r.Width, h = r.Height, inset = Math.Min(w, h) * 0.22f;
+            var body = new RectangleF(r.X + inset, r.Y + inset, w - inset * 2, h - inset * 2);
+            using (var pen = P(c, r, 0.09f))
+            {
+                using (var path = Theme.Round(body, body.Width * 0.14f)) g.DrawPath(pen, path);
+                var die = new RectangleF(body.X + body.Width * 0.28f, body.Y + body.Height * 0.28f,
+                    body.Width * 0.44f, body.Height * 0.44f);
+                using (var path = Theme.Round(die, die.Width * 0.18f)) g.DrawPath(pen, path);
+                for (int i = 0; i < 3; i++) // three pins per side
+                {
+                    float t = 0.32f + i * 0.18f, px = r.X + w * t, py = r.Y + h * t;
+                    g.DrawLine(pen, px, r.Y, px, body.Y);            // top
+                    g.DrawLine(pen, px, body.Bottom, px, r.Y + h);   // bottom
+                    g.DrawLine(pen, r.X, py, body.X, py);            // left
+                    g.DrawLine(pen, body.Right, py, r.X + w, py);    // right
+                }
+            }
+        }
+
         // Circular refresh arrow — update database
         public static void Refresh(Graphics g, RectangleF r, Color c)
         {

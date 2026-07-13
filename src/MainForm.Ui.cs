@@ -294,10 +294,10 @@ namespace ClamAVUI
             dashScanAll = MakeCardButton(Lang.T("btn.scanAll"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Stack);
             dashScanAll.SubText = Lang.T("btn.scanAllSub");
             dashScanAll.Click += delegate { RunFullScan(); };
-            btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
-            btnQuarantine.SubText = Lang.T("btn.quarantineSub");
-            btnQuarantine.Click += delegate { ShowPage(2); };
-            var rowTiles = new ModernButton[] { dashScanFile, dashScanFolder, dashScanAll, btnQuarantine };
+            dashScanRam = MakeCardButton(Lang.T("btn.scanRam"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Memory);
+            dashScanRam.SubText = Lang.T("btn.scanRamSub");
+            dashScanRam.Click += delegate { RunMemoryScan(); };
+            var rowTiles = new ModernButton[] { dashScanFile, dashScanFolder, dashScanAll, dashScanRam };
             for (int i = 0; i < rowTiles.Length; i++)
             {
                 rowTiles[i].Dock = DockStyle.Fill;
@@ -305,7 +305,7 @@ namespace ClamAVUI
                 scanBar.Controls.Add(rowTiles[i], i, 0);
             }
             scanButtons.Add(dashScanFile);
-            scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll);
+            scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll); scanButtons.Add(dashScanRam);
 
             // Compact stat strip + the (conditionally visible) update button — one
             // slim row instead of the old tall SYSTEM card, which ate half the
@@ -1414,10 +1414,10 @@ namespace ClamAVUI
             dashScanFolder.SubText = Lang.T("btn.scanFolderSub");
             dashScanAll.Text = Lang.T("btn.scanAll");
             dashScanAll.SubText = Lang.T("btn.scanAllSub");
+            dashScanRam.Text = Lang.T("btn.scanRam");
+            dashScanRam.SubText = Lang.T("btn.scanRamSub");
             btnUpdate.Text = Lang.T("btn.updateDb");
             btnScanLog.Text = Lang.T("btn.openLog");
-            btnQuarantine.Text = Lang.T("btn.openQuarantine");
-            btnQuarantine.SubText = Lang.T("btn.quarantineSub");
             if (btnQuarExclusions != null) btnQuarExclusions.Text = Lang.T("btn.exclusions");
             if (btnQuarDelete != null) btnQuarDelete.Text = Lang.T("btn.deleteForever");
             if (btnQuarRestore != null) btnQuarRestore.Text = Lang.T("btn.restore");

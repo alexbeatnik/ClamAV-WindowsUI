@@ -59,13 +59,16 @@ lives on the UI thread — background work goes through `ThreadPool`/threads
 and marshals back with `BeginInvoke` (wrapped in `try/catch` for the
 form-already-closed case). Child processes set `SynchronizingObject = this`.
 
-Quick scan also dumps running processes' executable RAM (`MainForm.MemScan.cs`):
-best-effort `OpenProcess`/`VirtualQueryEx`/`ReadProcessMemory` P/Invoke on the
-background listing thread, writing the executable non-image regions to a temp
-folder so clamd scans code that is masked or absent on disk. Inaccessible
-(protected / higher-integrity) processes are silently skipped; dumps are
-capped (per-region and total) and cleaned up on every scan-exit path and on
-form close (`CleanupMemDumps`).
+Quick scan, full scan, and the dedicated **Scan RAM** dashboard button all dump
+running processes' executable RAM (`MainForm.MemScan.cs`): best-effort
+`OpenProcess`/`VirtualQueryEx`/`ReadProcessMemory` P/Invoke on the background
+listing thread, writing the executable non-image regions to a temp folder so
+clamd scans code that is masked or absent on disk. The three entry points share
+`BeginListScan(roots, riskyOnly, dumpMemory)` — Scan RAM (`RunMemoryScan`) passes
+empty roots so only the dumps are scanned. Inaccessible (protected /
+higher-integrity) processes are silently skipped; dumps are capped (per-region
+and total) and cleaned up on every scan-exit path and on form close
+(`CleanupMemDumps`).
 
 Scan size limits are centralized in `ScanLimitsArg(bool skipBig)` (clamscan
 args) and mirrored in `WriteClamdConf()` (clamd.conf) — keep the two in sync.

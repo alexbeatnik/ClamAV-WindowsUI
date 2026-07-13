@@ -27,11 +27,14 @@ anytime from Settings — no restart required.
 ## Features
 
 - Scan a file, a folder, or the **whole PC** (all local drives) via `clamscan`
+- **Scan RAM**: a dashboard button that scans **only** the live memory of every
+  running process — the executable, non-image regions are dumped and scanned,
+  catching injected or unpacked code that is masked or absent on disk. In seconds,
+  no file walk. The same memory scan also runs as part of the quick and full scans
 - **Quick scan** (minutes, not hours): risky file types in common infection
   points — Downloads, Desktop, Documents, Temp, AppData, ProgramData, startup
   folders — plus the executables of every running process **and their live
-  memory (RAM)** — the executable, non-image regions of each process are dumped
-  and scanned, catching injected or unpacked code that is masked or absent on disk
+  memory (RAM)**
 - **Scheduled quick scan**: the quick scan also runs by itself — weekly by
   default, switchable to daily or off in Settings. If the PC was off past the
   due time, the missed scan catches up a few minutes after the next start;

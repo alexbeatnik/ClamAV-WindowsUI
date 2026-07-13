@@ -155,11 +155,6 @@ namespace ClamAVUI
                 dbStrip.Values = vals;
                 dbStrip.Invalidate();
             }
-            if (btnQuarantine != null && btnQuarantine.Badge != q)
-            {
-                btnQuarantine.Badge = q;
-                btnQuarantine.Invalidate();
-            }
         }
 
         // Moves a file into quarantine manually (without clamscan --move) in the
