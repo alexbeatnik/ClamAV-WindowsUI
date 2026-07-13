@@ -218,7 +218,7 @@ namespace ClamAVUI
 
         void AddExclusion(string path)
         {
-            if (!exclusions.Contains(path)) exclusions.Add(path);
+            AddPathOnce(exclusions, path);
         }
 
         // Asks the user what to do with each detected threat
