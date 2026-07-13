@@ -110,13 +110,27 @@ namespace ClamAVUI.Tests
     {
         public static void TestContainsAllLimits()
         {
-            string args = MainForm.ScanLimitsArg();
+            string args = MainForm.ScanLimitsArg(true);
             Assert.True(args.Contains("--max-filesize="), "max-filesize present");
             Assert.True(args.Contains("--max-scansize="), "max-scansize present");
             Assert.True(args.Contains("--max-recursion="), "max-recursion present");
             Assert.True(args.Contains("--max-files="), "max-files present");
             Assert.True(args.Contains("--max-scantime="), "max-scantime present");
             Assert.True(args.StartsWith(" "), "starts with a separator space (concatenated after other args)");
+        }
+
+        public static void TestSkipBigCapsFileSize()
+        {
+            string on = MainForm.ScanLimitsArg(true);
+            Assert.True(on.Contains("--max-filesize=200M"), "skip-big caps files at 200 MB");
+            Assert.True(on.Contains("--max-scansize=200M"), "skip-big caps scan size at 200 MB");
+        }
+
+        public static void TestNoSkipBigMeansUnlimited()
+        {
+            string off = MainForm.ScanLimitsArg(false);
+            Assert.True(off.Contains("--max-filesize=0"), "off = unlimited file size (0)");
+            Assert.True(off.Contains("--max-scansize=0"), "off = unlimited scan size (0)");
         }
     }
 

@@ -58,13 +58,18 @@ namespace ClamAVUI
             return chkQuarantine.Checked ? " --move=" + Quote(quarDir) : "";
         }
 
-        // Limits so clamscan doesn't bog down on gigabyte-sized files and deep archives —
-        // those used to make a full scan "hang" on a single file for minutes. Malware that
-        // ClamAV catches is almost always small, so this barely affects detection.
-        internal static string ScanLimitsArg()
+        // Limits so clamscan doesn't bog down on large files and deep archives. The
+        // per-file/scan size cap is user-controlled (the "skip large files" toggle):
+        // 200 MB when on, unlimited when off. 200 MB scans typical installers, DLLs
+        // and archives while skipping the multi-hundred-MB files (VM images, media,
+        // caches) that dominate scan time — malware ClamAV catches is almost always
+        // small. The rest always apply; max-scantime caps time per object.
+        internal static string ScanLimitsArg(bool skipBig)
         {
-            return " --max-filesize=50M --max-scansize=100M --max-recursion=6 --max-files=5000"
-                 + " --max-scantime=20000"; // no more than 20s per object (skips "heavy" files faster)
+            string size = skipBig ? "200M" : "0"; // 0 = unlimited in ClamAV
+            return " --max-filesize=" + size + " --max-scansize=" + size
+                 + " --max-recursion=6 --max-files=5000"
+                 + " --max-scantime=10000"; // no more than 10s per object — a few heavy files (big archives, raw memory) used to eat 20s each and dominate a quick scan
         }
 
         // ---------- Scan performance (Settings → Low / Normal / High) ----------
@@ -109,6 +114,7 @@ namespace ClamAVUI
             if (totalToScan <= 0 || scannedCount <= 0) return;
             double f = Math.Min(1.0, (double)scannedCount / totalToScan);
             progress.SetFraction(f);
+            shield.SetProgress(f); // the busy shield shows the percent instead of dots
             // ETA via a moving window (rate over the last ~seconds), not the whole elapsed
             // time — otherwise a slow start (loading the DB + counting files on C:\, which
             // hammers the disk) inflates the estimate to hundreds of hours.
@@ -351,9 +357,25 @@ namespace ClamAVUI
             ClearLog();
             AppendSection(Lang.T("title.fullScan"));
             AppendLog(string.Format(risky ? Lang.T("log.fullScanRisky") : Lang.T("log.fullScanAll"), drives), Theme.Text, "SCAN", false);
+            AppendLog(Lang.T("log.quickScanMemory"), Theme.Muted, null, true); // full scan also dumps process RAM
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             SetBusy(true, Lang.T("status.fullScanRunning"));
-            BeginListScan(targets, risky);
+            BeginListScan(targets, risky, true);
+        }
+
+        // RAM-only scan: dumps the executable memory of every running process and
+        // scans just those — no disk walk. Catches injected/unpacked code that's
+        // masked or absent on disk, in seconds rather than a full file scan.
+        void RunMemoryScan()
+        {
+            if (scanRunning || updateRunning || clamDir == null || !DbExists()) return;
+            ResetScanState(Lang.T("desc.memScan"));
+            ClearLog();
+            AppendSection(Lang.T("btn.scanRam"));
+            AppendLog(Lang.T("log.memScanHeader"), Theme.Text, "SCAN", false);
+            AppendLog(Lang.T("log.buildingList"), Theme.Muted);
+            SetBusy(true, Lang.T("status.memScanRunning"));
+            BeginListScan(new List<string>(), true, true); // no disk roots — memory only
         }
 
         // Shared counter reset before a manual scan
@@ -385,10 +407,11 @@ namespace ClamAVUI
             AppendLog(Lang.T("log.quickScanHeader"), Theme.Text, "SCAN", false);
             foreach (string r in roots) AppendLog("  " + r + "\r\n", Theme.Muted, null, true);
             AppendLog(Lang.T("log.quickScanProcesses"), Theme.Muted, null, true);
+            AppendLog(Lang.T("log.quickScanMemory"), Theme.Muted, null, true);
             AppendLog(Lang.T("log.buildingList"), Theme.Muted);
             roots.AddRange(RunningProcessFiles());
             SetBusy(true, Lang.T("status.quickScanRunning"));
-            BeginListScan(roots, true);
+            BeginListScan(roots, true, true);
         }
 
         // Common places malware ends up. Nested paths are merged so the same
@@ -454,6 +477,11 @@ namespace ClamAVUI
         // on gigabyte-sized videos/images, and progress knows the exact workload upfront.
         void BeginListScan(List<string> roots, bool riskyOnly)
         {
+            BeginListScan(roots, riskyOnly, false);
+        }
+
+        void BeginListScan(List<string> roots, bool riskyOnly, bool dumpMemory)
+        {
             int gen = ++countGen;
             cancelScanListing = false;
             listedCount = 0;
@@ -513,6 +541,41 @@ namespace ClamAVUI
                         catch { }
                     }
                 }
+                // Dump running processes' executable RAM (injected/masked code) and
+                // add those temp files to the scan — done after the disk walk so the
+                // slow part reports its own status line.
+                if (dumpMemory && !cancelScanListing && gen == countGen)
+                {
+                    try
+                    {
+                        BeginInvoke((Action)delegate
+                        {
+                            if (gen == countGen) statusLabel.Text = Lang.T("status.memScanning");
+                        });
+                    }
+                    catch { }
+                    int mp, mr; long mb;
+                    foreach (string f in DumpRunningProcessMemory(gen, out mp, out mr, out mb))
+                        if (seen.Add(f)) files.Add(f);
+                    int fMp = mp, fMr = mr; long fMb = mb;
+                    try
+                    {
+                        BeginInvoke((Action)delegate
+                        {
+                            if (gen == countGen)
+                                AppendLog(string.Format(Lang.T("log.memScanDone"),
+                                    fMr, fMp, FormatSize(fMb)), Theme.Muted, "SCAN", false);
+                        });
+                    }
+                    catch { }
+                }
+                // Smallest files first: fast, visible early progress; the few heavy
+                // files (which can each hit the per-object time limit) fall to the tail.
+                if (!cancelScanListing && files.Count > 1)
+                    SortPathsBySize(files, delegate(string p)
+                    {
+                        try { return new FileInfo(p).Length; } catch { return 0; }
+                    });
                 bool cancelled = cancelScanListing;
                 try
                 {
@@ -526,6 +589,7 @@ namespace ClamAVUI
                             SetBusy(false, Lang.T("status.scanCancelled"));
                             AppendLog(Lang.T("log.cancelled"), Theme.Warn);
                             RefreshDbStatus();
+                            CleanupMemDumps();
                             return;
                         }
                         if (files.Count == 0)
@@ -534,6 +598,7 @@ namespace ClamAVUI
                             SetBusy(false, Lang.T("status.noFiles"));
                             AppendLog(Lang.T("log.noFiles"), Theme.Text);
                             RefreshDbStatus();
+                            CleanupMemDumps();
                             return;
                         }
                         totalToScan = files.Count;
@@ -560,16 +625,19 @@ namespace ClamAVUI
         int scanProcsLeft;                 // how many clamdscan processes are still running
         int scanAggExit;                   // aggregated exit code across chunks
 
-        void WriteClamdConf()
+        // skipBig is read on the UI thread and passed in — this runs on the
+        // EnsureClamd background thread, which must not touch controls
+        void WriteClamdConf(bool skipBig)
         {
+            // same size cap as ScanLimitsArg: 200 MB when "skip large files" is on, else 0 = unlimited
+            string size = skipBig ? "200M" : "0";
             File.WriteAllText(Path.Combine(clamDir, "clamd.conf"),
                 "TCPSocket " + ClamdPort + "\r\n" +
                 "TCPAddr 127.0.0.1\r\n" +
                 "MaxThreads " + PerfMaxThreads(perfMode) + "\r\n" +
                 "DatabaseDirectory \"" + dbDir + "\"\r\n" +
-                // same limits as ScanLimitsArg uses for clamscan
-                "MaxScanSize 100M\r\nMaxFileSize 50M\r\nMaxRecursion 6\r\n" +
-                "MaxFiles 5000\r\nMaxScanTime 20000\r\n" +
+                "MaxScanSize " + size + "\r\nMaxFileSize " + size + "\r\nMaxRecursion 6\r\n" +
+                "MaxFiles 5000\r\nMaxScanTime 10000\r\n" +
                 "IdleTimeout 300\r\nForeground yes\r\n",
                 new UTF8Encoding(false));
         }
@@ -607,6 +675,7 @@ namespace ClamAVUI
         void EnsureClamd(Action onReady, Action<string> onFail)
         {
             startingEngine = true;
+            bool skipBig = chkSkipBig.Checked; // snapshot on the UI thread for the worker
             var th = new System.Threading.Thread(delegate()
             {
                 string err = null;
@@ -616,7 +685,7 @@ namespace ClamAVUI
                     DateTime stopWait = DateTime.Now.AddSeconds(10);
                     while (clamdStopping && DateTime.Now < stopWait)
                         System.Threading.Thread.Sleep(300);
-                    WriteClamdConf();
+                    WriteClamdConf(skipBig);
                     if (cancelScanListing) err = CancelledMarker;
                     else if (!ClamdPing())
                     {
@@ -724,6 +793,7 @@ namespace ClamAVUI
                 SetBusy(false, Lang.T("status.listCreateFailed"));
                 AppendLog(string.Format(Lang.T("log.listCreateFailed"), ex.Message), Theme.Danger);
                 RefreshDbStatus();
+                CleanupMemDumps();
                 return;
             }
 
@@ -732,7 +802,7 @@ namespace ClamAVUI
             if (!haveDaemon)
             {
                 StartProcess(Path.Combine(clamDir, "clamscan.exe"),
-                    "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg()
+                    "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg(chkSkipBig.Checked)
                     + " --file-list=" + Quote(fullList), OnScanLine, OnScanExit);
                 return;
             }
@@ -743,12 +813,19 @@ namespace ClamAVUI
             var chunks = new List<string>();
             if (n > 1)
             {
-                int per = (files.Count + n - 1) / n;
-                for (int i = 0; i < n && i * per < files.Count; i++)
+                // Round-robin (stripe) the list across the N processes instead of
+                // handing each a contiguous block. The file list is ordered by the
+                // directory walk, so heavy folders (AppData\Local) and the memory
+                // dumps — all appended at the tail — would otherwise pile into the
+                // last chunk(s), collapsing parallelism to 1 core partway through.
+                // Striping gives every process an even mix, keeping all cores busy
+                // to the end (and smoothing the ETA).
+                var slices = StripeFiles(files, n);
+                for (int i = 0; i < n; i++)
                 {
-                    var slice = files.GetRange(i * per, Math.Min(per, files.Count - i * per));
+                    if (slices[i].Count == 0) continue;
                     string cp = Path.Combine(tmp, "clamui-list-" + (i + 1) + "-" + Guid.NewGuid().ToString("N") + ".txt");
-                    try { File.WriteAllLines(cp, slice.ToArray(), new UTF8Encoding(false)); }
+                    try { File.WriteAllLines(cp, slices[i].ToArray(), new UTF8Encoding(false)); }
                     catch { chunks.Clear(); break; } // failed — fall back to a single process
                     chunks.Add(cp);
                     batchListPaths.Add(cp);
@@ -770,13 +847,42 @@ namespace ClamAVUI
                         AppendLog(Lang.T("log.cancelled"), Theme.Warn);
                         RefreshDbStatus();
                         CleanupBatchLists();
+                        CleanupMemDumps();
                         return;
                     }
                     AppendLog(string.Format(Lang.T("log.daemonFallback"), msg), Theme.Warn);
                     StartProcess(Path.Combine(clamDir, "clamscan.exe"),
-                        "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg()
+                        "--stdout -d " + Quote(dbDir) + MoveArg() + ScanLimitsArg(chkSkipBig.Checked)
                         + " --file-list=" + Quote(fullList), OnScanLine, OnScanExit);
                 });
+        }
+
+        // Sorts paths by size, smallest first, using a caller-supplied size lookup
+        // (so it's testable without touching the disk). Sizes are read once up front —
+        // never from inside the comparator — so it stays O(n log n), not O(n log n)
+        // stat calls. Combined with StripeFiles, each clamdscan process then scans
+        // small files first (fast, visible early progress) and the few heavy files
+        // (each capped at max-scantime) fall to the tail, where a slowing "finishing
+        // up" reads far better than a scan that sits at 0-7 % for minutes.
+        internal static void SortPathsBySize(List<string> files, Func<string, long> sizeOf)
+        {
+            var size = new Dictionary<string, long>(files.Count);
+            foreach (string f in files) if (!size.ContainsKey(f)) size[f] = sizeOf(f);
+            files.Sort(delegate(string a, string b) { return size[a].CompareTo(size[b]); });
+        }
+
+        // Distributes files round-robin across n buckets (stripe): file j goes to
+        // bucket j % n. The file list is ordered by the directory walk, so heavy
+        // folders and the appended memory dumps cluster at the tail; a contiguous
+        // split would dump all of that on one clamdscan process. Striping spreads it
+        // so every process finishes around the same time. Every file lands in exactly
+        // one bucket, order within a bucket preserved.
+        internal static List<List<string>> StripeFiles(List<string> files, int n)
+        {
+            var slices = new List<List<string>>(n);
+            for (int i = 0; i < n; i++) slices.Add(new List<string>());
+            for (int j = 0; j < files.Count; j++) slices[j % n].Add(files[j]);
+            return slices;
         }
 
         void StartClamdscanChunks(List<string> chunks)
@@ -1001,6 +1107,7 @@ namespace ClamAVUI
                 statusLabel.Text = string.Format(Lang.T("status.scanInterrupted"), exitCode);
                 RefreshDbStatus();
             }
+            CleanupMemDumps(); // after the (modal) threat dialog, so found dumps stayed listable
             // New files may have appeared while the scan was running
             if (pendingFiles.Count > 0) { debounceTimer.Stop(); debounceTimer.Start(); }
         }

@@ -169,7 +169,7 @@ namespace ClamAVUI
 
             loadingSettings = true;
             bool monitor = false, quarantine = false, autoUpdate = true, riskyOnly = true, fullRisky = true;
-            bool usbPrompt = true, logDetails = false, notify = true;
+            bool usbPrompt = true, logDetails = false, notify = true, skipBig = true;
             bool hadSettings = File.Exists(settingsPath), modeAskedSeen = false;
             if (hadSettings)
             {
@@ -194,6 +194,7 @@ namespace ClamAVUI
                     else if (t == "usbprompt=0") usbPrompt = false;
                     else if (t == "logdetails=1") logDetails = true;
                     else if (t == "notify=0") notify = false;
+                    else if (t == "skipbig=0") skipBig = false;
                     else if (t == "perf=low") perfMode = 0;
                     else if (t == "perf=high") perfMode = 2;
                     else if (t == "sched=off") schedMode = 0;
@@ -287,6 +288,7 @@ namespace ClamAVUI
             chkUsbPrompt.Checked = usbPrompt;
             chkLogDetails.Checked = logDetails;
             chkNotify.Checked = notify;
+            chkSkipBig.Checked = skipBig;
             UpdatePerfButtons();  // reflect the loaded perf mode
             UpdateSchedButtons(); // reflect the loaded schedule
             chkMonitor.Checked = monitor; // CheckedChanged will start the watchers itself
@@ -342,6 +344,7 @@ namespace ClamAVUI
             sb.AppendLine("usbprompt=" + (chkUsbPrompt.Checked ? "1" : "0"));
             sb.AppendLine("logdetails=" + (chkLogDetails.Checked ? "1" : "0"));
             sb.AppendLine("notify=" + (chkNotify.Checked ? "1" : "0"));
+            sb.AppendLine("skipbig=" + (chkSkipBig.Checked ? "1" : "0"));
             sb.AppendLine("perf=" + (perfMode == 0 ? "low" : perfMode == 2 ? "high" : "normal"));
             sb.AppendLine("sched=" + (schedMode == 0 ? "off" : schedMode == 1 ? "daily" : "weekly"));
             sb.AppendLine("lastsched=" + lastScheduledScan.Ticks);

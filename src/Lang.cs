@@ -72,10 +72,10 @@ namespace ClamAVUI
             A("btn.scanFolderSub", "Scan any directory", "Перевірити будь-яку папку");
             A("btn.scanAll", "FULL PC", "ВЕСЬ ПК");
             A("btn.scanAllSub", "All local drives", "Усі локальні диски");
-            A("btn.quarantineSub", "Isolated threats", "Ізольовані загрози");
+            A("btn.scanRam", "SCAN RAM", "СКАН RAM");
+            A("btn.scanRamSub", "Running processes' memory", "Пам'ять запущених процесів");
             A("btn.updateDb", "UPDATE DATABASE", "ОНОВИТИ БАЗИ");
             A("btn.openLog", "OPEN LOG FILE", "ВІДКРИТИ ФАЙЛ ЖУРНАЛУ");
-            A("btn.openQuarantine", "OPEN QUARANTINE", "ВІДКРИТИ КАРАНТИН");
             A("btn.exclusions", "MANAGE EXCLUSIONS…", "КЕРУВАТИ ВИКЛЮЧЕННЯМИ…");
             A("btn.quick", "QUICK", "ШВИДКИЙ");
             A("btn.file", "FILE", "ФАЙЛ");
@@ -139,6 +139,7 @@ namespace ClamAVUI
             A("settings.language", "Interface language:", "Мова інтерфейсу:");
             A("settings.usbPrompt", "Offer to scan USB drives when connected", "Пропонувати перевірку USB-накопичувачів при підключенні");
             A("settings.notifications", "Tray notifications (threat alerts are always shown)", "Сповіщення в треї (про знайдені загрози — завжди)");
+            A("settings.skipBig", "Skip files larger than 200 MB (faster scans)", "Пропускати файли, більші за 200 МБ (швидше сканування)");
             A("settings.status", "Status", "Стан");
             A("sstat.engine", "Engine", "Рушій");
             A("sstat.database", "Database", "Бази");
@@ -285,8 +286,14 @@ namespace ClamAVUI
             // Quick scan
             A("desc.quickScan", "quick scan", "швидке сканування");
             A("log.quickScanHeader", "Quick scan: risky file types in common infection points.\r\n", "Швидке сканування: небезпечні типи файлів у типових місцях зараження.\r\n");
-            A("log.quickScanProcesses", "  + executables of running processes\r\n\r\n", "  + виконувані файли запущених процесів\r\n\r\n");
+            A("log.quickScanProcesses", "  + executables of running processes\r\n", "  + виконувані файли запущених процесів\r\n");
+            A("log.quickScanMemory", "  + memory (RAM) of running processes — catches code masked on disk\r\n\r\n", "  + пам'ять (RAM) запущених процесів — ловить код, замаскований на диску\r\n\r\n");
             A("status.quickScanRunning", "Quick scan…", "Швидке сканування…");
+            A("desc.memScan", "RAM scan", "скан пам'яті");
+            A("log.memScanHeader", "RAM scan: executable memory of every running process.\r\n", "Скан RAM: виконувана пам'ять кожного запущеного процесу.\r\n");
+            A("status.memScanRunning", "Scanning RAM…", "Сканую RAM…");
+            A("status.memScanning", "Scanning process memory (RAM)…", "Сканую пам'ять процесів (RAM)…");
+            A("log.memScanDone", "Dumped {0} executable memory region(s) from {1} process(es) ({2}) for scanning.\r\n", "Знято {0} виконуваних ділянок пам'яті з {1} процесів ({2}) для перевірки.\r\n");
 
             // File listing
             A("status.buildingListFound", "Building file list… found {0}", "Складаю список файлів… знайдено {0}");

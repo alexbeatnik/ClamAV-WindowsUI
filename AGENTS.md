@@ -44,6 +44,7 @@ One `MainForm` class split into partial files by concern:
 | `src/MainForm.cs` | state fields, `Main()`, process plumbing, log rendering, autostart |
 | `src/MainForm.Ui.cs` | all UI construction, pages, dialogs, `ApplyLanguage()` |
 | `src/MainForm.Scan.cs` | scans, progress/ETA, clamd engine, scheduled quick scan |
+| `src/MainForm.MemScan.cs` | quick-scan process-memory dumping (RAM regions → temp files → clamd) |
 | `src/MainForm.Updates.cs` | DB updates, ClamAV download, app self-update |
 | `src/MainForm.Settings.cs` | locating ClamAV, `settings.ini` load/save |
 | `src/MainForm.Quarantine.cs` | neutralized `.quar` storage, index, threat dialog |
@@ -57,6 +58,25 @@ UI is built in code; the settings card uses absolute positions. All state
 lives on the UI thread — background work goes through `ThreadPool`/threads
 and marshals back with `BeginInvoke` (wrapped in `try/catch` for the
 form-already-closed case). Child processes set `SynchronizingObject = this`.
+
+Quick scan, full scan, and the dedicated **Scan RAM** dashboard button all dump
+running processes' executable RAM (`MainForm.MemScan.cs`): best-effort
+`OpenProcess`/`VirtualQueryEx`/`ReadProcessMemory` P/Invoke on the background
+listing thread, writing the executable non-image regions to a temp folder so
+clamd scans code that is masked or absent on disk. The three entry points share
+`BeginListScan(roots, riskyOnly, dumpMemory)` — Scan RAM (`RunMemoryScan`) passes
+empty roots so only the dumps are scanned. Inaccessible (protected /
+higher-integrity) processes are silently skipped; dumps are capped (per-region
+and total) and cleaned up on every scan-exit path and on form close
+(`CleanupMemDumps`).
+
+Scan size limits are centralized in `ScanLimitsArg(bool skipBig)` (clamscan
+args) and mirrored in `WriteClamdConf()` (clamd.conf) — keep the two in sync.
+The per-file/scan-size cap is user-controlled by the "skip large files"
+toggle (`chkSkipBig`, `skipbig=` in settings.ini, on by default): 200 MB when
+on, `0` = unlimited when off. The other limits (recursion, file count, and
+especially `--max-scantime=10000` — 10 s per object) always apply and are
+what keep even a multi-GB file from hanging a scan; don't remove them.
 
 ## Working rules — details live in `.claude/skills/`
 

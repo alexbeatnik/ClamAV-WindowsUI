@@ -92,8 +92,8 @@ namespace ClamAVUI
         };
 
         // UI
-        ModernButton btnStop, btnUpdate, btnWatchDirs, btnQuarantine, btnScanLog, btnClearLog;
-        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp, btnAbout;
+        ModernButton btnStop, btnUpdate, btnWatchDirs, btnScanLog, btnClearLog;
+        ModernButton dashQuick, dashStop, dashScanFile, dashScanFolder, dashScanAll, dashScanRam, btnInstall, btnLangEn, btnLangUk, btnFixWinTemp, btnAbout;
         ModernButton btnPerfLow, btnPerfNormal, btnPerfHigh;
         Label perfLabel, perfHint;
         ModernButton btnSchedOff, btnSchedDaily, btnSchedWeekly;
@@ -114,7 +114,7 @@ namespace ClamAVUI
         RichTextBox log;
         Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, scanProgressLabel;
         ShieldIndicator shield;
-        Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt, chkLogDetails;
+        Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt, chkLogDetails, chkSkipBig;
         Toggle chkNotify; // tray notifications; threat alerts are shown regardless (see Notify)
         SlimMarquee progress;
         NotifyIcon tray;

@@ -294,10 +294,10 @@ namespace ClamAVUI
             dashScanAll = MakeCardButton(Lang.T("btn.scanAll"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Stack);
             dashScanAll.SubText = Lang.T("btn.scanAllSub");
             dashScanAll.Click += delegate { RunFullScan(); };
-            btnQuarantine = MakeCardButton(Lang.T("btn.openQuarantine"), Theme.Card, Theme.CardLine, Theme.Warn, Ico.Radiation);
-            btnQuarantine.SubText = Lang.T("btn.quarantineSub");
-            btnQuarantine.Click += delegate { ShowPage(2); };
-            var rowTiles = new ModernButton[] { dashScanFile, dashScanFolder, dashScanAll, btnQuarantine };
+            dashScanRam = MakeCardButton(Lang.T("btn.scanRam"), Theme.Card, Theme.CardLine, Theme.Text, Ico.Memory);
+            dashScanRam.SubText = Lang.T("btn.scanRamSub");
+            dashScanRam.Click += delegate { RunMemoryScan(); };
+            var rowTiles = new ModernButton[] { dashScanFile, dashScanFolder, dashScanAll, dashScanRam };
             for (int i = 0; i < rowTiles.Length; i++)
             {
                 rowTiles[i].Dock = DockStyle.Fill;
@@ -305,7 +305,7 @@ namespace ClamAVUI
                 scanBar.Controls.Add(rowTiles[i], i, 0);
             }
             scanButtons.Add(dashScanFile);
-            scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll);
+            scanButtons.Add(dashScanFolder); scanButtons.Add(dashScanAll); scanButtons.Add(dashScanRam);
 
             // Compact stat strip + the (conditionally visible) update button — one
             // slim row instead of the old tall SYSTEM card, which ate half the
@@ -889,21 +889,26 @@ namespace ClamAVUI
             chkNotify.Checked = true;
             chkNotify.CheckedChanged += delegate { SaveSettings(); };
 
+            // caps the per-file scan size at 200 MB (see ScanLimitsArg/WriteClamdConf)
+            chkSkipBig = MakeCheck(Lang.T("settings.skipBig"), 20, 344);
+            chkSkipBig.Checked = true;
+            chkSkipBig.CheckedChanged += delegate { SaveSettings(); };
+
             langLabel = new Label();
             langLabel.Text = Lang.T("settings.language");
             langLabel.AutoSize = true;
             langLabel.ForeColor = Theme.Text;
             langLabel.BackColor = Theme.Card;
-            langLabel.Location = new Point(20, 358);
+            langLabel.Location = new Point(20, 394);
             btnLangEn = MakeButton("English", 90, Theme.Btn, Theme.BtnHot);
             btnLangEn.TextColor = Theme.BtnText;
             btnLangEn.BackColor = Theme.Card;
-            btnLangEn.SetBounds(180, 352, 90, 30);
+            btnLangEn.SetBounds(180, 388, 90, 30);
             btnLangEn.Click += delegate { SetLanguage(Lang.Language.English); };
             btnLangUk = MakeButton("Українська", 110, Theme.Btn, Theme.BtnHot);
             btnLangUk.TextColor = Theme.BtnText;
             btnLangUk.BackColor = Theme.Card;
-            btnLangUk.SetBounds(276, 352, 110, 30);
+            btnLangUk.SetBounds(276, 388, 110, 30);
             btnLangUk.Click += delegate { SetLanguage(Lang.Language.Ukrainian); };
             UpdateLangButtons();
 
@@ -990,7 +995,7 @@ namespace ClamAVUI
 
             btnInstall = MakeLightButton(Lang.T("btn.installPF"), Ico.Download);
             btnInstall.BackColor = Theme.Card;
-            btnInstall.SetBounds(20, 398, 290, 30);
+            btnInstall.SetBounds(20, 434, 290, 30);
             btnInstall.Visible = !IsInstalled;
             btnInstall.Click += delegate
             {
@@ -1007,7 +1012,7 @@ namespace ClamAVUI
             installedBadge.ForeColor = Theme.Good;
             installedBadge.BackColor = Theme.Card;
             installedBadge.AutoSize = true;
-            installedBadge.Location = new Point(20, 404);
+            installedBadge.Location = new Point(20, 440);
             installedBadge.Visible = IsInstalled;
             cardSettingsPanel.Controls.Add(installedBadge);
 
@@ -1015,7 +1020,7 @@ namespace ClamAVUI
             // (via this button, or automatically after --install elevates and fixes it).
             btnFixWinTemp = MakeLightButton(Lang.T("btn.fixWinTemp"), Ico.Unlock);
             btnFixWinTemp.BackColor = Theme.Card;
-            btnFixWinTemp.SetBounds(20, 436, 290, 30);
+            btnFixWinTemp.SetBounds(20, 472, 290, 30);
             btnFixWinTemp.Visible = !CanWatchDirectory(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"));
             btnFixWinTemp.Click += delegate { FixWinTempAccess(); };
@@ -1023,7 +1028,7 @@ namespace ClamAVUI
             // About: description, quick-start steps, and project links (star / releases / follow)
             btnAbout = MakeLightButton(Lang.T("btn.about"), Ico.Info);
             btnAbout.BackColor = Theme.Card;
-            btnAbout.SetBounds(20, 474, 290, 30);
+            btnAbout.SetBounds(20, 510, 290, 30);
             btnAbout.Click += delegate { ShowAboutDialog(); };
 
             cardSettingsPanel.Controls.Add(chkMonitor);
@@ -1035,6 +1040,7 @@ namespace ClamAVUI
             cardSettingsPanel.Controls.Add(chkAutostart);
             cardSettingsPanel.Controls.Add(chkUsbPrompt);
             cardSettingsPanel.Controls.Add(chkNotify);
+            cardSettingsPanel.Controls.Add(chkSkipBig);
             cardSettingsPanel.Controls.Add(langLabel);
             cardSettingsPanel.Controls.Add(btnLangEn);
             cardSettingsPanel.Controls.Add(btnLangUk);
@@ -1408,10 +1414,10 @@ namespace ClamAVUI
             dashScanFolder.SubText = Lang.T("btn.scanFolderSub");
             dashScanAll.Text = Lang.T("btn.scanAll");
             dashScanAll.SubText = Lang.T("btn.scanAllSub");
+            dashScanRam.Text = Lang.T("btn.scanRam");
+            dashScanRam.SubText = Lang.T("btn.scanRamSub");
             btnUpdate.Text = Lang.T("btn.updateDb");
             btnScanLog.Text = Lang.T("btn.openLog");
-            btnQuarantine.Text = Lang.T("btn.openQuarantine");
-            btnQuarantine.SubText = Lang.T("btn.quarantineSub");
             if (btnQuarExclusions != null) btnQuarExclusions.Text = Lang.T("btn.exclusions");
             if (btnQuarDelete != null) btnQuarDelete.Text = Lang.T("btn.deleteForever");
             if (btnQuarRestore != null) btnQuarRestore.Text = Lang.T("btn.restore");
@@ -1445,6 +1451,7 @@ namespace ClamAVUI
             chkAutostart.Text = Lang.T("settings.autostart");
             chkUsbPrompt.Text = Lang.T("settings.usbPrompt");
             chkNotify.Text = Lang.T("settings.notifications");
+            chkSkipBig.Text = Lang.T("settings.skipBig");
             UpdateMonitorLabel();
             langLabel.Text = Lang.T("settings.language");
             UpdateLangButtons();
@@ -1505,6 +1512,7 @@ namespace ClamAVUI
             StopWatchers();
             StopCurrent();
             KillClamdNow(); // synchronous: the async StopClamd worker wouldn't survive process exit
+            CleanupMemDumps(); // remove any RAM dumps from an in-flight scan
             tray.Visible = false;
         }
 

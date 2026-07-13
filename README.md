@@ -27,9 +27,14 @@ anytime from Settings — no restart required.
 ## Features
 
 - Scan a file, a folder, or the **whole PC** (all local drives) via `clamscan`
+- **Scan RAM**: a dashboard button that scans **only** the live memory of every
+  running process — the executable, non-image regions are dumped and scanned,
+  catching injected or unpacked code that is masked or absent on disk. In seconds,
+  no file walk. The same memory scan also runs as part of the quick and full scans
 - **Quick scan** (minutes, not hours): risky file types in common infection
   points — Downloads, Desktop, Documents, Temp, AppData, ProgramData, startup
-  folders — plus the executables of every running process
+  folders — plus the executables of every running process **and their live
+  memory (RAM)**
 - **Scheduled quick scan**: the quick scan also runs by itself — weekly by
   default, switchable to daily or off in Settings. If the PC was off past the
   due time, the missed scan catches up a few minutes after the next start;
@@ -38,6 +43,11 @@ anytime from Settings — no restart required.
   (exe, scripts, archives, documents) — the app builds the file list itself,
   so the scanner doesn't waste time on gigabyte-sized videos and images;
   scanning **all** files can be enabled in Settings
+- **Skip large files**: a Settings toggle (on by default) caps the per-file
+  scan size at 200 MB so scans don't crawl through big installers, VM images
+  and media (malware ClamAV catches is almost always small); turn it off to
+  scan files of any size (a 10 s-per-object time limit keeps even those from
+  hanging the scan)
 - **clamd engine while scanning**: before a manual scan the app starts the
   `clamd` daemon (the database loads into memory once, ~20-30s), scans with
   several parallel `clamdscan` processes, and stops the daemon immediately
