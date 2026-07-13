@@ -555,7 +555,7 @@ namespace ClamAVUI
                     }
                     catch { }
                     int mp, mr; long mb;
-                    foreach (string f in DumpRunningProcessMemory(out mp, out mr, out mb))
+                    foreach (string f in DumpRunningProcessMemory(gen, out mp, out mr, out mb))
                         if (seen.Add(f)) files.Add(f);
                     int fMp = mp, fMr = mr; long fMb = mb;
                     try
@@ -625,10 +625,12 @@ namespace ClamAVUI
         int scanProcsLeft;                 // how many clamdscan processes are still running
         int scanAggExit;                   // aggregated exit code across chunks
 
-        void WriteClamdConf()
+        // skipBig is read on the UI thread and passed in — this runs on the
+        // EnsureClamd background thread, which must not touch controls
+        void WriteClamdConf(bool skipBig)
         {
             // same size cap as ScanLimitsArg: 200 MB when "skip large files" is on, else 0 = unlimited
-            string size = chkSkipBig.Checked ? "200M" : "0";
+            string size = skipBig ? "200M" : "0";
             File.WriteAllText(Path.Combine(clamDir, "clamd.conf"),
                 "TCPSocket " + ClamdPort + "\r\n" +
                 "TCPAddr 127.0.0.1\r\n" +
@@ -673,6 +675,7 @@ namespace ClamAVUI
         void EnsureClamd(Action onReady, Action<string> onFail)
         {
             startingEngine = true;
+            bool skipBig = chkSkipBig.Checked; // snapshot on the UI thread for the worker
             var th = new System.Threading.Thread(delegate()
             {
                 string err = null;
@@ -682,7 +685,7 @@ namespace ClamAVUI
                     DateTime stopWait = DateTime.Now.AddSeconds(10);
                     while (clamdStopping && DateTime.Now < stopWait)
                         System.Threading.Thread.Sleep(300);
-                    WriteClamdConf();
+                    WriteClamdConf(skipBig);
                     if (cancelScanListing) err = CancelledMarker;
                     else if (!ClamdPing())
                     {

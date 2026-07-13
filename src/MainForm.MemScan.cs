@@ -61,9 +61,12 @@ namespace ClamAVUI
         const long MemMaxTotalBytes = 128L * 1024 * 1024;   // overall cap so a scan never fills the disk or dominates its time
 
         // Walks every accessible process' address space and dumps the qualifying
-        // regions to memDumpDir. Runs on the background listing thread; honours the
-        // same cancel flag as file listing. Returns the dump file paths.
-        List<string> DumpRunningProcessMemory(out int procCount, out int regionCount, out long totalBytes)
+        // regions to memDumpDir. Runs on the background listing thread; stops on the
+        // cancel flag OR when a newer scan superseded this one (gen != countGen) —
+        // the flag alone isn't enough, because the next BeginListScan resets it to
+        // false, which would let a stale dump thread keep writing and race the new
+        // scan over the shared memDumpDir/memDumpPaths. Returns the dump file paths.
+        List<string> DumpRunningProcessMemory(int gen, out int procCount, out int regionCount, out long totalBytes)
         {
             procCount = 0; regionCount = 0; totalBytes = 0;
             var files = new List<string>();
@@ -79,11 +82,13 @@ namespace ClamAVUI
 
             foreach (Process p in Process.GetProcesses())
             {
-                if (cancelScanListing || totalBytes >= MemMaxTotalBytes) { try { p.Dispose(); } catch { } break; }
+                // when stopping, keep iterating (skipping the work) so every Process
+                // in the snapshot still gets disposed instead of leaking handles
+                bool stop = cancelScanListing || gen != countGen || totalBytes >= MemMaxTotalBytes;
                 int pid = 0; string pname = "proc";
-                try { pid = p.Id; pname = p.ProcessName; } catch { }
+                if (!stop) { try { pid = p.Id; pname = p.ProcessName; } catch { } }
                 try { p.Dispose(); } catch { }
-                if (pid == 0 || pid == selfPid) continue; // don't scan our own RAM
+                if (stop || pid == 0 || pid == selfPid) continue; // never scan our own RAM
 
                 IntPtr h = MemNative.OpenProcess(
                     MemNative.PROCESS_QUERY_INFORMATION | MemNative.PROCESS_VM_READ, false, pid);
@@ -98,13 +103,14 @@ namespace ClamAVUI
                     {
                         long regionSize = mbi.RegionSize.ToInt64();
                         if (regionSize <= 0) break;
-                        if (!cancelScanListing && totalBytes < MemMaxTotalBytes
+                        if (!cancelScanListing && gen == countGen && totalBytes < MemMaxTotalBytes
                             && ShouldDumpRegion(mbi.State, mbi.Protect, mbi.Type, regionSize, MemMaxRegionBytes))
                         {
-                            string f = DumpRegion(h, mbi.BaseAddress, regionSize, pname, pid);
+                            long wrote;
+                            string f = DumpRegion(h, mbi.BaseAddress, regionSize, pname, pid, out wrote);
                             if (f != null)
                             {
-                                try { totalBytes += new FileInfo(f).Length; } catch { }
+                                totalBytes += wrote;
                                 files.Add(f);
                                 regionCount++;
                             }
@@ -112,20 +118,21 @@ namespace ClamAVUI
                         long next = mbi.BaseAddress.ToInt64() + regionSize;
                         if (next <= addr.ToInt64()) break; // no forward progress — avoid an infinite loop
                         addr = new IntPtr(next);
-                        if (cancelScanListing || totalBytes >= MemMaxTotalBytes) break;
+                        if (cancelScanListing || gen != countGen || totalBytes >= MemMaxTotalBytes) break;
                     }
                 }
                 catch { }
                 finally { MemNative.CloseHandle(h); }
             }
-            memDumpPaths.AddRange(files);
+            lock (memDumpPaths) memDumpPaths.AddRange(files);
             return files;
         }
 
         // Reads one region out of the target process and writes it to a temp .bin,
         // named so the log's FOUND line points at the source process.
-        string DumpRegion(IntPtr h, IntPtr baseAddr, long size, string pname, int pid)
+        string DumpRegion(IntPtr h, IntPtr baseAddr, long size, string pname, int pid, out long bytesWritten)
         {
+            bytesWritten = 0;
             try
             {
                 var buf = new byte[size];
@@ -138,6 +145,7 @@ namespace ClamAVUI
                 string path = Path.Combine(memDumpDir, name);
                 using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
                     fs.Write(buf, 0, n);
+                bytesWritten = n;
                 return path;
             }
             catch { return null; } // region freed / unreadable / disk error — skip
@@ -147,8 +155,11 @@ namespace ClamAVUI
         // scan (after the threat dialog, so found dumps stay listable) and on exit.
         void CleanupMemDumps()
         {
-            foreach (string p in memDumpPaths) TryDelete(p);
-            memDumpPaths.Clear();
+            lock (memDumpPaths)
+            {
+                foreach (string p in memDumpPaths) TryDelete(p);
+                memDumpPaths.Clear();
+            }
             if (memDumpDir != null)
             {
                 try { if (Directory.Exists(memDumpDir)) Directory.Delete(memDumpDir, true); } catch { }
