@@ -56,6 +56,15 @@ namespace ClamAVUI.Tests
                 "less than one line of room still shows one line");
         }
 
+        public static void TestNegativeHeightShowsOneLine()
+        {
+            // during construction the not-yet-laid-out label reports a negative
+            // ClientSize.Height (observed -418); the count must still be 1, not a
+            // negative/huge value that string.Join would choke on
+            Assert.Equal(1, MainForm.HistoryLinesThatFit(-418, 8, 15),
+                "a negative construction-time height still shows one line");
+        }
+
         public static void TestTallCardIsCappedAtEight()
         {
             Assert.Equal(8, MainForm.HistoryLinesThatFit(1000, 8, 15),

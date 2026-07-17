@@ -134,7 +134,7 @@ namespace ClamAVUI
         // Formats an already-computed newest-file time — callers that also need the
         // staleness check reuse one DbNewestTime() result instead of re-enumerating
         // the database directory (and possibly racing a concurrent download).
-        static string DbDateString(DateTime newest)
+        internal static string DbDateString(DateTime newest)
         {
             return newest == DateTime.MinValue ? "—" : newest.ToString("dd.MM.yyyy HH:mm");
         }
