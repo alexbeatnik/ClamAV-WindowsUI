@@ -105,16 +105,9 @@ namespace ClamAVUI
             titleText.Font = new Font("Segoe UI Semibold", 17f);
             titleText.ForeColor = Theme.Text;
             titleText.AutoSize = true;
-            titleText.Location = new Point(190, 20);
-            var verText = new Label();
-            verText.Text = "v" + AppVersion;
-            verText.Font = new Font("Segoe UI", 8f); // small and quiet — it's a detail, not a headline
-            verText.ForeColor = Theme.Muted;
-            verText.AutoSize = true;
-            verText.Location = new Point(193, 52);
+            titleText.Location = new Point(190, 26); // vertically centered now that the version line is gone
             title.Controls.Add(logo);
             title.Controls.Add(titleText);
-            title.Controls.Add(verText);
 
             var navBar = new FlowLayoutPanel();
             navBar.Dock = DockStyle.Right;
