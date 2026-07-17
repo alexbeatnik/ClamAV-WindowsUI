@@ -54,6 +54,7 @@ namespace ClamAVUI
         void OfferUsbScan(string root)
         {
             if (chkUsbPrompt == null || !chkUsbPrompt.Checked) return;
+            if (ProtectionPaused) return; // the user asked for quiet — no prompts either
             if (clamDir == null || !DbExists()) return; // nothing to scan with yet
             try
             {
@@ -63,7 +64,7 @@ namespace ClamAVUI
                 if (d.DriveType != DriveType.Removable || !d.IsReady) return;
             }
             catch { return; }
-            if (scanRunning || updateRunning)
+            if (scan.Running || updateRunning)
             {
                 Notify(6000, string.Format(Lang.T("tray.usbBusy"), root), ToolTipIcon.Info);
                 return;

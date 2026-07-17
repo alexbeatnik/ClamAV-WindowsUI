@@ -239,7 +239,7 @@ namespace ClamAVUI
                 list.Columns.Add(Lang.T("col.file"), 400);
                 list.Columns.Add(Lang.T("col.threat"), 280);
 
-                foreach (string[] f in foundFiles)
+                foreach (string[] f in scan.FoundFiles)
                 {
                     if (!File.Exists(f[0])) continue; // already moved or gone
                     var item = new ListViewItem(new string[] { f[0], f[1] });
@@ -284,7 +284,7 @@ namespace ClamAVUI
                     foreach (var it in picked())
                     {
                         string[] meta = (string[])it.Tag;
-                        if (QuarantineFile(meta[0], meta[1], currentScanDesc)) { movedCount++; list.Items.Remove(it); }
+                        if (QuarantineFile(meta[0], meta[1], scan.Desc)) { scan.Moved++; list.Items.Remove(it); }
                     }
                     SaveSettings();
                     UpdateStatsUi();

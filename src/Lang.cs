@@ -428,6 +428,8 @@ namespace ClamAVUI
             A("hero.putPortableClamAV", "Place a portable ClamAV build in the \"clamav\" folder next to the program", "Поклади portable ClamAV у папку \"clamav\" поруч з програмою");
             A("hero.protected", "Protected", "Захищено");
             A("hero.dbFrom", "Signature database from {0}", "Бази сигнатур від {0}");
+            A("hero.dbStale", "Signature database is outdated", "Бази сигнатур застаріли");
+            A("hero.dbStaleSub", "Signatures from {0} — press \"Update Database\"", "Сигнатури від {0} — натисни «Оновити бази»");
             A("hero.dbNeeded", "Signature database needed", "Потрібні бази сигнатур");
             A("hero.pressUpdateFirstTime", "Press \"Update Database\" — first download is ~250 MB", "Натисни «Оновити бази» — перший раз завантажиться ~250 МБ");
             A("tray.appUpdateInstalling", "Updating ClamAV UI to {0} — the app will restart in a few seconds…", "Оновлюю ClamAV UI до {0} — програма перезапуститься за кілька секунд…");
@@ -474,6 +476,26 @@ namespace ClamAVUI
             A("stat.threats", "Threats", "Загроз");
             A("stat.quarantined", "Quarantined", "У карантині");
             A("stat.signatures", "Signatures", "Сигнатур");
+
+            // Pausing protection (tray menu: 1/2/5 hours or until the app restarts)
+            A("tray.pauseMenu", "Pause protection", "Призупинити захист");
+            A("pause.for1h", "For 1 hour", "На 1 годину");
+            A("pause.for2h", "For 2 hours", "На 2 години");
+            A("pause.for5h", "For 5 hours", "На 5 годин");
+            A("pause.untilRestart", "Until restart", "До перезавантаження");
+            A("tray.resumeProtection", "Resume protection", "Відновити захист");
+            A("pause.untilTime", "until {0}", "до {0}");
+            A("pause.untilRestartText", "until restart", "до перезавантаження");
+            A("hero.paused", "Protection paused", "Захист призупинено");
+            A("hero.pausedSub", "Monitoring, scheduled and USB checks are off ({0})",
+                "Моніторинг, планові та USB-перевірки вимкнено ({0})");
+            A("log.protectionPaused", "Protection paused ({0}): monitoring, scheduled scans and USB checks are off. Manual scans and database updates keep working.\r\n",
+                "Захист призупинено ({0}): моніторинг, планові скани та USB-перевірки вимкнено. Ручні сканування та оновлення баз працюють.\r\n");
+            A("msg.protectionPaused", "Protection paused ({0}).", "Захист призупинено ({0}).");
+            A("log.protectionResumed", "Protection resumed: monitoring and scheduled scans are active again.\r\n",
+                "Захист відновлено: моніторинг і планові скани знову активні.\r\n");
+            A("msg.protectionResumed", "Protection resumed.", "Захист відновлено.");
+            A("sval.paused", "Paused", "Призупинено");
         }
     }
 }

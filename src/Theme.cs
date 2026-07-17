@@ -31,6 +31,23 @@ namespace ClamAVUI
         // MessageBox), used to postpone timer-triggered work like scheduled scans
         [DllImport("user32.dll")]
         public static extern bool IsWindowEnabled(IntPtr hWnd);
+        // Ground truth for "is the window really minimized": ShowInTaskbar
+        // recreates the handle, after which Form.WindowState can report Normal
+        // while the real window is still iconic at -32000 (see RestoreFromTray)
+        [DllImport("user32.dll")]
+        public static extern bool IsIconic(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        public const int SW_RESTORE = 9;
+        // Used by the second-instance handshake: HWND_BROADCAST only reaches
+        // UNOWNED top-level windows, and a tray-hidden form is an owned window
+        // (that's how ShowInTaskbar=false hides it) — the show-yourself message
+        // must be posted to the running instance's windows directly.
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        [DllImport("user32.dll")]
+        public static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
+        [DllImport("user32.dll")]
+        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
     }
 
     // Dark theme palette — deep navy-tinted surfaces + vivid accents, the look
@@ -89,8 +106,26 @@ namespace ClamAVUI
         [DllImport("dwmapi.dll")]
         static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
-        // Dark window title bar (Win10 1903+); without it the frame stays white
+        // GDI COLORREF is 0x00BBGGRR — not the ARGB order Color uses
+        static int ToColorRef(Color c)
+        {
+            return c.R | (c.G << 8) | (c.B << 16);
+        }
+
+        // Dark window title bar (Win10 1903+); without it the frame stays white.
+        // On Windows 11 the caption is additionally painted in the app's own
+        // background color so the title bar doesn't read as a foreign gray strip;
+        // those attributes simply fail on Windows 10 and the dark caption stays.
         public static void DarkTitleBar(Form f)
+        {
+            DarkTitleBar(f, false);
+        }
+
+        // hideCaptionText paints the caption text in the caption color, making it
+        // invisible while Form.Text keeps naming the window for the taskbar,
+        // Alt+Tab and screen readers — used by the main window, whose in-window
+        // header already carries the branding. Dialogs keep their visible titles.
+        public static void DarkTitleBar(Form f, bool hideCaptionText)
         {
             EventHandler apply = delegate
             {
@@ -99,6 +134,12 @@ namespace ClamAVUI
                     int on = 1;
                     if (DwmSetWindowAttribute(f.Handle, 20, ref on, 4) != 0)
                         DwmSetWindowAttribute(f.Handle, 19, ref on, 4); // older Win10 builds
+                    int caption = ToColorRef(Bg);
+                    DwmSetWindowAttribute(f.Handle, 35, ref caption, 4);  // DWMWA_CAPTION_COLOR (Win11 22000+)
+                    int text = ToColorRef(hideCaptionText ? Bg : Text);
+                    DwmSetWindowAttribute(f.Handle, 36, ref text, 4);     // DWMWA_TEXT_COLOR
+                    int border = ToColorRef(CardLine);
+                    DwmSetWindowAttribute(f.Handle, 34, ref border, 4);   // DWMWA_BORDER_COLOR — matches the card outlines
                 }
                 catch { }
             };

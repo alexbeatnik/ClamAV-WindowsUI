@@ -29,7 +29,7 @@ namespace ClamAVUI
 
         void MaybeCheckAppUpdate()
         {
-            if (checkingAppUpdate || scanRunning || updateRunning) return;
+            if (checkingAppUpdate || scan.Running || updateRunning) return;
             if ((DateTime.Now - lastAppUpdateCheck).TotalHours < AppUpdateCheckHours) return;
             checkingAppUpdate = true;
             System.Threading.ThreadPool.QueueUserWorkItem(delegate { AppUpdateWorker(); });
@@ -93,7 +93,7 @@ namespace ClamAVUI
                 SaveSettings();
             }
             if (updatePath == null) return;
-            if (scanRunning || updateRunning) { TryDelete(updatePath); return; } // busy — retried tomorrow
+            if (scan.Running || updateRunning) { TryDelete(updatePath); return; } // busy — retried tomorrow
             ApplyAppUpdate(updatePath, version);
         }
 
@@ -166,7 +166,7 @@ namespace ClamAVUI
 
         void StartClamAVDownload()
         {
-            if (scanRunning || updateRunning) return;
+            if (scan.Running || updateRunning) return;
             updateRunning = true;
 
             // If the archive was already downloaded (interrupted install), extract it instead of re-downloading
@@ -317,7 +317,7 @@ namespace ClamAVUI
 
         void RunFreshclam(bool auto)
         {
-            if (scanRunning || updateRunning) return;
+            if (scan.Running || updateRunning) return;
             if (clamDir == null) { StartClamAVDownload(); return; } // clean PC
             // the server rate-limited us (429) — don't hammer it, that would extend the block
             if (DateTime.Now < dbCooldownUntil)

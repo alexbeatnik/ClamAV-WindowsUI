@@ -276,6 +276,7 @@ namespace ClamAVUI
         void StartWatchers()
         {
             StopWatchers();
+            if (ProtectionPaused) return; // protection paused — no monitoring until it resumes
             foreach (string d in watchDirs)
             {
                 if (!Directory.Exists(d)) continue;
@@ -328,7 +329,7 @@ namespace ClamAVUI
 
         void OnDebounceTick(object sender, EventArgs e)
         {
-            if (scanRunning || updateRunning || !DbExists()) return; // try again on the next tick
+            if (scan.Running || updateRunning || !DbExists()) return; // try again on the next tick
             var ready = new List<string>();
             var stillLocked = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (KeyValuePair<string, int> kvp in pendingFiles)
@@ -375,10 +376,10 @@ namespace ClamAVUI
         void ScanFileBatch(List<string> files)
         {
             ResetScanState(Lang.T("desc.autoCheck"));
-            monitorScan = true;
+            scan.Monitor = true;
             countGen++; // the total is known upfront, no background counting needed
-            totalToScan = files.Count;
-            initialFilesToScan = files.Count;
+            scan.TotalToScan = files.Count;
+            scan.InitialTotal = files.Count;
             AppendSection(Lang.T("desc.autoCheck"));
             AppendLog(string.Format(Lang.T("log.newFilesHeader"), DateTime.Now, files.Count), Theme.Text, "SCAN", false);
             SetBusy(true, string.Format(Lang.T("status.autoCheck"), files.Count));
@@ -408,6 +409,24 @@ namespace ClamAVUI
         {
             foreach (string p in batchListPaths) TryDelete(p);
             batchListPaths.Clear();
+        }
+
+        // Sweeps leftovers of a crashed/killed earlier run out of %TEMP%: the
+        // --file-list files (clamui-list-*, kilobytes) and above all the
+        // clamui-mem-* RAM-dump folders, which can hold up to 128 MB. Normal
+        // exits clean up after themselves — this only matters after a hard crash.
+        // Runs once at startup (before any scan can have created new files);
+        // the GUID-suffixed patterns can't match anything that isn't ours.
+        internal static void SweepStaleTempFiles(string tempDir)
+        {
+            try
+            {
+                foreach (string f in Directory.GetFiles(tempDir, "clamui-list-*.txt"))
+                    try { File.Delete(f); } catch { }
+                foreach (string d in Directory.GetDirectories(tempDir, "clamui-mem-*"))
+                    try { Directory.Delete(d, true); } catch { }
+            }
+            catch { } // temp dir unreadable — nothing to sweep
         }
 
     }

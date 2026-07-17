@@ -28,7 +28,7 @@ namespace ClamAVUI
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
-            Theme.DarkTitleBar(this);
+            Theme.DarkTitleBar(this, true); // caption text hidden — the in-window header is the branding
 
             BuildUi();
             LocateClamAV();
@@ -36,6 +36,12 @@ namespace ClamAVUI
             RefreshDbStatus();
             ShowPage(0);
             EnsureAutostartFirstRun();
+
+            // a crashed earlier run may have left scan temp files (RAM dumps up
+            // to 128 MB) in %TEMP% — sweep them in the background; this run's own
+            // files can't exist yet, and their GUID names are unique anyway
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            { SweepStaleTempFiles(Path.GetTempPath()); });
 
             if (startInTray)
             {
@@ -201,6 +207,7 @@ namespace ClamAVUI
             menu.Renderer = new ToolStripProfessionalRenderer(new DarkMenuColors());
             menu.ForeColor = Theme.Text;
             trayOpenItem = menu.Items.Add(Lang.T("tray.open"), null, delegate { RestoreFromTray(); });
+            BuildPauseMenu(menu); // "Pause protection" (1/2/5 h, until restart) + RESUME
             trayExitItem = menu.Items.Add(Lang.T("tray.exit"), null, delegate { reallyClose = true; Close(); });
             tray.ContextMenuStrip = menu;
 
@@ -1375,14 +1382,16 @@ namespace ClamAVUI
             setStatusVals[0].ForeColor = engine ? Theme.Good : Theme.Danger;
 
             bool db = DbExists();
-            setStatusVals[1].Text = db ? DbDateString() : "—";
-            setStatusVals[1].ForeColor = db ? Theme.Good : Theme.Warn;
+            DateTime dbNewest = DbNewestTime(); // one directory pass for both the text and the color
+            setStatusVals[1].Text = db ? DbDateString(dbNewest) : "—";
+            setStatusVals[1].ForeColor = db && !DbIsStale(dbNewest, DateTime.Now) ? Theme.Good : Theme.Warn;
 
             bool mon = chkMonitor.Checked;
-            setStatusVals[2].Text = mon
-                ? Lang.T("sval.enabled") + " (" + watchDirs.Count + ")"
+            bool paused = ProtectionPaused;
+            setStatusVals[2].Text = paused ? Lang.T("sval.paused")
+                : mon ? Lang.T("sval.enabled") + " (" + watchDirs.Count + ")"
                 : Lang.T("sval.disabled");
-            setStatusVals[2].ForeColor = mon ? Theme.Good : Theme.Muted;
+            setStatusVals[2].ForeColor = paused ? Theme.Warn : mon ? Theme.Good : Theme.Muted;
 
             int q = QuarantineCount();
             setStatusVals[3].Text = string.Format(Lang.T("sval.filesN"), q);
@@ -1469,6 +1478,7 @@ namespace ClamAVUI
 
             trayOpenItem.Text = Lang.T("tray.open");
             trayExitItem.Text = Lang.T("tray.exit");
+            ApplyPauseLanguage();
 
             RefreshDbStatus();
             UpdateStatsUi();
@@ -1494,9 +1504,19 @@ namespace ClamAVUI
 
         void RestoreFromTray()
         {
-            ShowInTaskbar = true;
+            ShowInTaskbar = true; // recreates the handle while still minimized
+            // After that recreation Form.WindowState can report Normal while the
+            // real window is still iconic at -32000 — the assignment below is
+            // then a no-op and the window never actually comes back. Ask the OS,
+            // not the desynced property, and restore through it.
+            if (NativeMethods.IsIconic(Handle))
+                NativeMethods.ShowWindow(Handle, NativeMethods.SW_RESTORE);
             WindowState = FormWindowState.Normal;
             Activate();
+            // The handle recreation above can swallow the activity card's final
+            // Resize, leaving it with the one-line text computed while the window
+            // was collapsed — recompute at the restored size.
+            if (pages != null && pages[0] != null && pages[0].Visible) RefreshHistory();
         }
 
         void OnFormClosing(object sender, FormClosingEventArgs e)
