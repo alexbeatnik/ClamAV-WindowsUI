@@ -34,5 +34,7 @@ the assembly — never hardcode a version string anywhere else.
 
 ## Release notes / README
 
-When a release adds user-visible features, update `README.md` (Features
-section and, if layout changed, the screenshots) in the same branch.
+When a release adds user-visible features, update `README.md` (the "What it
+can do" list and, if the layout changed, the screenshots — retaken by the
+`screenshots` skill) in the same branch. Architecture, install layout and
+other technical detail belong in `README.DEV.md`, not in `README.md`.
