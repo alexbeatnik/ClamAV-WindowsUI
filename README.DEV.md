@@ -146,7 +146,8 @@ GitHub Release whenever `AssemblyVersion` in `src/AssemblyInfo.cs` changes on
 automatically). It no-ops if that version was already released and can also be
 triggered manually from the Actions tab.
 
-The app **self-updates** from these releases (checked every 4 hours), so:
+The app **self-updates** from these releases (checked on every launch, then
+once a day while it keeps running), so:
 never publish a release whose `ClamAVUI.exe` asset is missing or renamed,
 never delete the latest release's asset, and always publish a version
 strictly greater than the previous one.
