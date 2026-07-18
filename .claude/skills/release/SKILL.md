@@ -21,9 +21,10 @@ the assembly — never hardcode a version string anywhere else.
 
 ## Constraints (breaking these breaks users)
 
-- The app **self-updates** from these releases (checked every 4 hours
-  against the latest release): never publish a release whose `ClamAVUI.exe`
-  asset is missing or renamed, and never delete the latest release's asset.
+- The app **self-updates** from these releases (checked against the latest
+  release on every launch, then once a day while running): never publish a
+  release whose `ClamAVUI.exe` asset is missing or renamed, and never delete
+  the latest release's asset.
 - Self-update compares versions — a release must always carry a version
   strictly greater than the previous one.
 - Old `settings.ini` files must keep working after an update (see the
@@ -34,5 +35,7 @@ the assembly — never hardcode a version string anywhere else.
 
 ## Release notes / README
 
-When a release adds user-visible features, update `README.md` (Features
-section and, if layout changed, the screenshots) in the same branch.
+When a release adds user-visible features, update `README.md` (the "What it
+can do" list and, if the layout changed, the screenshots — retaken by the
+`screenshots` skill) in the same branch. Architecture, install layout and
+other technical detail belong in `README.DEV.md`, not in `README.md`.

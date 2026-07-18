@@ -1,0 +1,60 @@
+// Tests for the stale-database rule (src\MainForm.Settings.cs) that turns the
+// hero yellow and shows the update button when the signatures have aged.
+using System;
+using ClamAVUI;
+
+namespace ClamAVUI.Tests
+{
+    static class DbStaleTests
+    {
+        static readonly DateTime Now = new DateTime(2026, 7, 14, 12, 0, 0);
+
+        public static void TestFreshDbIsNotStale()
+        {
+            Assert.False(MainForm.DbIsStale(Now.AddDays(-1), Now), "yesterday's database is fresh");
+        }
+
+        public static void TestOldDbIsStale()
+        {
+            Assert.True(MainForm.DbIsStale(Now.AddDays(-8), Now), "8-day-old database is stale");
+        }
+
+        public static void TestThresholdBoundaryIsStale()
+        {
+            Assert.True(MainForm.DbIsStale(Now.AddDays(-MainForm.DbStaleDays), Now),
+                "exactly DbStaleDays counts as stale");
+        }
+
+        public static void TestJustUnderThresholdIsNotStale()
+        {
+            Assert.False(MainForm.DbIsStale(Now.AddDays(-MainForm.DbStaleDays).AddHours(1), Now),
+                "an hour under the threshold is still fresh");
+        }
+
+        public static void TestMissingDbIsNotStale()
+        {
+            // no database at all is a different hero state — the stale warning must not fire
+            Assert.False(MainForm.DbIsStale(DateTime.MinValue, Now), "MinValue means no database");
+        }
+
+        public static void TestFutureTimestampIsNotStale()
+        {
+            Assert.False(MainForm.DbIsStale(Now.AddDays(1), Now), "clock set back must not flag stale");
+        }
+
+        // ---- DbDateString: the display copy of the newest-file time ----
+
+        public static void TestDbDateStringFormatsRealDate()
+        {
+            Assert.Equal("16.07.2026 09:23",
+                MainForm.DbDateString(new DateTime(2026, 7, 16, 9, 23, 0)),
+                "a real timestamp renders dd.MM.yyyy HH:mm");
+        }
+
+        public static void TestDbDateStringMissingDbIsDash()
+        {
+            // MinValue = no database — the hero/status show an em dash, not a date
+            Assert.Equal("—", MainForm.DbDateString(DateTime.MinValue), "no database renders as a dash");
+        }
+    }
+}

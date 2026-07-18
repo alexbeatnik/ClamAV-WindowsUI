@@ -22,13 +22,23 @@ namespace ClamAVUI
         {
             Text = AppName;
             Icon = AppIcon;
-            MinimumSize = new Size(900, 700);
+            // Fixed size: every page is a hand-tuned absolute layout for 940×720
+            // (the settings card is absolute-positioned), so resizing/maximizing
+            // only misaligns them — and a resizable frame's borders shrank the
+            // client height enough to squeeze the recent-activity card to one line.
+            // Both caption boxes are dropped so only ✕ remains — Windows can't show
+            // minimize+close without a grayed maximize placeholder between them, and
+            // ✕ already minimizes to the tray instead of exiting (see OnFormClosing),
+            // so a separate minimize button adds nothing.
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            MinimizeBox = false;
             Size = new Size(940, 720);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
-            Theme.DarkTitleBar(this);
+            Theme.DarkTitleBar(this, true); // caption text hidden — the in-window header is the branding
 
             BuildUi();
             LocateClamAV();
@@ -36,6 +46,12 @@ namespace ClamAVUI
             RefreshDbStatus();
             ShowPage(0);
             EnsureAutostartFirstRun();
+
+            // a crashed earlier run may have left scan temp files (RAM dumps up
+            // to 128 MB) in %TEMP% — sweep them in the background; this run's own
+            // files can't exist yet, and their GUID names are unique anyway
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            { SweepStaleTempFiles(Path.GetTempPath()); });
 
             if (startInTray)
             {
@@ -94,16 +110,9 @@ namespace ClamAVUI
             titleText.Font = new Font("Segoe UI Semibold", 17f);
             titleText.ForeColor = Theme.Text;
             titleText.AutoSize = true;
-            titleText.Location = new Point(190, 20);
-            var verText = new Label();
-            verText.Text = "v" + AppVersion;
-            verText.Font = new Font("Segoe UI", 8f); // small and quiet — it's a detail, not a headline
-            verText.ForeColor = Theme.Muted;
-            verText.AutoSize = true;
-            verText.Location = new Point(193, 52);
+            titleText.Location = new Point(190, 26); // vertically centered now that the version line is gone
             title.Controls.Add(logo);
             title.Controls.Add(titleText);
-            title.Controls.Add(verText);
 
             var navBar = new FlowLayoutPanel();
             navBar.Dock = DockStyle.Right;
@@ -201,6 +210,7 @@ namespace ClamAVUI
             menu.Renderer = new ToolStripProfessionalRenderer(new DarkMenuColors());
             menu.ForeColor = Theme.Text;
             trayOpenItem = menu.Items.Add(Lang.T("tray.open"), null, delegate { RestoreFromTray(); });
+            BuildPauseMenu(menu); // "Pause protection" (1/2/5 h, until restart) + RESUME
             trayExitItem = menu.Items.Add(Lang.T("tray.exit"), null, delegate { reallyClose = true; Close(); });
             tray.ContextMenuStrip = menu;
 
@@ -329,30 +339,52 @@ namespace ClamAVUI
             dbStrip.Height = 66;
             dbStrip.Padding = new Padding(0, 10, 12, 14);
 
-            // Last-activity strip: one line instead of a scrollable log card — the
-            // full history is one click away via "Open Log File", so the dashboard
-            // doesn't need to dedicate a big scrollable panel to it.
+            // Recent-activity card: fills the space at the bottom of the dashboard
+            // (a thin one-line strip wasted it, and clipped the single line against
+            // the button) and lists the last few scans at full width, so no line is
+            // cut off. The full history is still one click away via OPEN LOG FILE.
             activityRow = new StatusBanner();
-            activityRow.Dock = DockStyle.Top;
-            activityRow.Height = 56;
+            activityRow.Dock = DockStyle.Fill;
             activityRow.Margin = new Padding(6, 4, 6, 4);
-            activityRow.Padding = new Padding(20, 2, 10, 8); // bottom inset keeps children off the card shadow
+            activityRow.Padding = new Padding(20, 10, 12, 10);
             activityRow.AccentColor = Theme.Accent;
-            lastActivityLabel = new Label();
-            lastActivityLabel.Dock = DockStyle.Fill;
-            lastActivityLabel.AutoEllipsis = true;
-            lastActivityLabel.Font = new Font("Consolas", 9f);
-            lastActivityLabel.ForeColor = Theme.Muted;
-            lastActivityLabel.BackColor = Theme.Card;
-            lastActivityLabel.TextAlign = ContentAlignment.MiddleLeft;
+
+            // header: caption on the left, OPEN LOG FILE on the right
+            var activityHeader = new Panel();
+            activityHeader.Dock = DockStyle.Top;
+            activityHeader.Height = 34;
+            activityHeader.BackColor = Theme.Card;
+            activityCaption = new Label();
+            activityCaption.Dock = DockStyle.Left;
+            activityCaption.Width = 260;
+            activityCaption.TextAlign = ContentAlignment.MiddleLeft;
+            activityCaption.Font = new Font("Segoe UI Semibold", 8.5f);
+            activityCaption.ForeColor = Theme.Muted;
+            activityCaption.BackColor = Theme.Card;
+            activityCaption.Text = Lang.T("activity.recent").ToUpperInvariant();
             // dark secondary button — a light one here outshines the primary actions above
             btnScanLog = MakeButton(Lang.T("btn.openLog"), 235, Theme.Bg, Theme.CardLine, Ico.LogIcon);
             btnScanLog.BackColor = Theme.Card;
             btnScanLog.Dock = DockStyle.Right;
             btnScanLog.Margin = new Padding(0, 0, 0, 0);
             btnScanLog.Click += delegate { OpenScanLog(); };
+            activityHeader.Controls.Add(activityCaption);
+            activityHeader.Controls.Add(btnScanLog);
+
+            lastActivityLabel = new Label();
+            lastActivityLabel.Dock = DockStyle.Fill;
+            lastActivityLabel.UseMnemonic = false; // paths/descriptions may contain "&"
+            lastActivityLabel.Padding = new Padding(0, 8, 0, 0);
+            lastActivityLabel.Font = new Font("Consolas", 9f);
+            lastActivityLabel.ForeColor = Theme.Muted;
+            lastActivityLabel.BackColor = Theme.Card;
+            lastActivityLabel.TextAlign = ContentAlignment.TopLeft;
+            // recompute the fitting line count once the label has its laid-out size.
+            // Resize fires during construction (Controls.Add lays the label out) before
+            // pages[0] is assigned, so guard the not-yet-built page reference.
+            lastActivityLabel.Resize += delegate { if (pages != null && pages[0] != null && pages[0].Visible) RefreshHistory(); };
             activityRow.Controls.Add(lastActivityLabel);
-            activityRow.Controls.Add(btnScanLog);
+            activityRow.Controls.Add(activityHeader);
 
             // Dock=Top stacks in reverse add order: the big tile mosaic first, then the
             // action tiles, the stat strip, the database strip, and the last-activity strip
@@ -1184,23 +1216,60 @@ namespace ClamAVUI
             if (idx == 3) { RefreshSettingsStatus(); }
         }
 
-        // Shows just the last line of scans.log — the full history is one click
-        // away via "Open Log File" (see activityRow in BuildDashboardPage).
+        // Lists the most recent scans.log lines (newest first) — as many as fit the
+        // activity card. The full history is one click away via "Open Log File".
         void RefreshHistory()
         {
             if (lastActivityLabel == null) return;
+            // Minimizing collapses the docked layout to ~0 height; recomputing here
+            // would rewrite the text down to one line. Keep the last good text —
+            // RestoreFromTray refreshes once the real size is back. IsIconic is
+            // checked too: after a ShowInTaskbar handle recreation WindowState
+            // can claim Normal while the window is still iconic (RestoreFromTray).
+            if (WindowState == FormWindowState.Minimized || NativeMethods.IsIconic(Handle)) return;
             try
             {
-                string last = null;
+                // how many lines fit the current card height (fixed-size window, so
+                // this is stable once laid out; recomputed on the card's Resize)
+                int max = HistoryLinesThatFit(lastActivityLabel.ClientSize.Height,
+                    lastActivityLabel.Padding.Vertical, lastActivityLabel.Font.Height);
+                var recent = new List<string>();
                 if (File.Exists(scanLogPath))
                 {
                     string[] lines = File.ReadAllLines(scanLogPath);
-                    for (int i = lines.Length - 1; i >= 0; i--)
-                        if (lines[i].Trim().Length > 0) { last = lines[i]; break; }
+                    for (int i = lines.Length - 1; i >= 0 && recent.Count < max; i--)
+                        if (lines[i].Trim().Length > 0) recent.Add(FormatHistoryLine(lines[i]));
                 }
-                lastActivityLabel.Text = last ?? Lang.T("history.empty");
+                lastActivityLabel.Text = recent.Count > 0
+                    ? string.Join("\r\n", recent.ToArray())
+                    : Lang.T("history.empty");
             }
             catch { }
+        }
+
+        // How many scans.log lines fit the activity label (pure, unit-tested):
+        // one line per font-height + 2px of leading; a degenerate/collapsed
+        // height still shows one line, and the card never lists more than 8.
+        internal static int HistoryLinesThatFit(int clientHeight, int verticalPadding, int fontHeight)
+        {
+            int lineH = fontHeight + 2;
+            int avail = clientHeight - verticalPadding;
+            int max = avail > lineH ? avail / lineH : 1;
+            return max > 8 ? 8 : max;
+        }
+
+        // scans.log keeps ISO timestamps (sortable, locale-neutral) — but the
+        // dashboard shows dd.MM.yyyy everywhere else, so the displayed copy of
+        // the line is reformatted; lines without the expected stamp pass through.
+        internal static string FormatHistoryLine(string line)
+        {
+            DateTime dt;
+            if (line != null && line.Length >= 16
+                && DateTime.TryParseExact(line.Substring(0, 16), "yyyy-MM-dd HH:mm",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out dt))
+                return dt.ToString("dd.MM.yyyy HH:mm") + line.Substring(16);
+            return line;
         }
 
         void SetScanEnabled(bool on)
@@ -1375,14 +1444,16 @@ namespace ClamAVUI
             setStatusVals[0].ForeColor = engine ? Theme.Good : Theme.Danger;
 
             bool db = DbExists();
-            setStatusVals[1].Text = db ? DbDateString() : "—";
-            setStatusVals[1].ForeColor = db ? Theme.Good : Theme.Warn;
+            DateTime dbNewest = DbNewestTime(); // one directory pass for both the text and the color
+            setStatusVals[1].Text = db ? DbDateString(dbNewest) : "—";
+            setStatusVals[1].ForeColor = db && !DbIsStale(dbNewest, DateTime.Now) ? Theme.Good : Theme.Warn;
 
             bool mon = chkMonitor.Checked;
-            setStatusVals[2].Text = mon
-                ? Lang.T("sval.enabled") + " (" + watchDirs.Count + ")"
+            bool paused = ProtectionPaused;
+            setStatusVals[2].Text = paused ? Lang.T("sval.paused")
+                : mon ? Lang.T("sval.enabled") + " (" + watchDirs.Count + ")"
                 : Lang.T("sval.disabled");
-            setStatusVals[2].ForeColor = mon ? Theme.Good : Theme.Muted;
+            setStatusVals[2].ForeColor = paused ? Theme.Warn : mon ? Theme.Good : Theme.Muted;
 
             int q = QuarantineCount();
             setStatusVals[3].Text = string.Format(Lang.T("sval.filesN"), q);
@@ -1469,6 +1540,8 @@ namespace ClamAVUI
 
             trayOpenItem.Text = Lang.T("tray.open");
             trayExitItem.Text = Lang.T("tray.exit");
+            ApplyPauseLanguage();
+            if (activityCaption != null) activityCaption.Text = Lang.T("activity.recent").ToUpperInvariant();
 
             RefreshDbStatus();
             UpdateStatsUi();
@@ -1494,9 +1567,19 @@ namespace ClamAVUI
 
         void RestoreFromTray()
         {
-            ShowInTaskbar = true;
+            ShowInTaskbar = true; // recreates the handle while still minimized
+            // After that recreation Form.WindowState can report Normal while the
+            // real window is still iconic at -32000 — the assignment below is
+            // then a no-op and the window never actually comes back. Ask the OS,
+            // not the desynced property, and restore through it.
+            if (NativeMethods.IsIconic(Handle))
+                NativeMethods.ShowWindow(Handle, NativeMethods.SW_RESTORE);
             WindowState = FormWindowState.Normal;
             Activate();
+            // The handle recreation above can swallow the activity card's final
+            // Resize, leaving it with the one-line text computed while the window
+            // was collapsed — recompute at the restored size.
+            if (pages != null && pages[0] != null && pages[0].Visible) RefreshHistory();
         }
 
         void OnFormClosing(object sender, FormClosingEventArgs e)

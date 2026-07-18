@@ -30,27 +30,22 @@ namespace ClamAVUI
         string clamVersion = "—";
         string lastScanInfo = ""; // empty = never scanned yet
         Process currentProc; // running clamscan or freshclam
-        int scannedCount, foundCount, movedCount;
         long totalScans, totalFound, totalMoved, totalFilesScanned; // cumulative statistics
-        readonly List<string[]> foundFiles = new List<string[]>(); // {path, threat name}
-        bool scanRunning, updateRunning;
-        bool monitorScan;    // true if the current scan was triggered by the monitor, not the user
+        bool updateRunning;
+        // Per-scan state (counters, phase/cancel flags, description) lives in one
+        // ScanSession, replaced wholesale by ResetScanState so nothing leaks from
+        // one scan into the next; late readers keep the finished scan's numbers.
+        ScanSession scan = new ScanSession();
         bool reallyClose;    // true = exit, false = minimize to tray
         bool autostartInitialized; // whether autostart was already auto-enabled on first run
         bool modeAsked;            // first-run "portable vs installed" question already answered
         int perfMode = 1;    // scan performance: 0 = low, 1 = normal, 2 = high (see Perf* helpers)
 
-        // Progress: total file count (computed in the background), generation to cancel counting
-        int totalToScan;
-        int initialFilesToScan;
+        // Generation counter to cancel background file-counting when a newer scan
+        // starts — kept on MainForm (not the session) so a superseded background
+        // walker can compare against the live value.
         int countGen;
-        DateTime scanStart;
-        DateTime rateWinTime = DateTime.MinValue;     // start of the moving window used to estimate rate
-        int rateWinCount;                             // scannedCount at the start of the window
-        bool loggedTotal;            // whether "Files to check: N" was already logged
-        DateTime lastScanOutput;     // last time clamscan produced output (detects "stuck on a file")
         Timer scanHeartbeat;         // logs progress every N seconds even when clamscan is silent
-        string currentScanDesc = "";
         string scanLogPath;   // scans.log next to the exe
         Timer autoUpdateTimer;
         bool autoUpdateFirstTick = true;
@@ -122,7 +117,7 @@ namespace ClamAVUI
         bool quarSortAsc = false;
         readonly List<ModernButton> scanButtons = new List<ModernButton>(); // all buttons that start a scan (both pages)
         RichTextBox log;
-        Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, scanProgressLabel;
+        Label statusLabel, heroTitle, heroSub, langLabel, lastActivityLabel, activityCaption, scanProgressLabel;
         ShieldIndicator shield;
         Toggle chkAutostart, chkMonitor, chkQuarantine, chkAutoUpdate, chkRiskyOnly, chkFullRisky, chkUsbPrompt, chkLogDetails, chkSkipBig;
         Toggle chkNotify; // tray notifications; threat alerts are shown regardless (see Notify)
@@ -195,12 +190,52 @@ namespace ClamAVUI
             singleInstanceMutex = new System.Threading.Mutex(true, "Local\\ClamAVUI_SingleInstance_v1", out createdNew);
             if (!createdNew)
             {
+                // The broadcast reaches the instance while its window is visible or
+                // plainly minimized, but a tray-hidden window is OWNED (that's how
+                // ShowInTaskbar=false hides it) and HWND_BROADCAST skips owned
+                // windows — so the running instance must also get the message
+                // posted straight to its windows (unknown windows just ignore it).
                 NativeMethods.PostMessage((IntPtr)NativeMethods.HWND_BROADCAST, WmShow, IntPtr.Zero, IntPtr.Zero);
+                PostShowToRunningInstance();
                 return;
             }
 
             try { Application.Run(new MainForm(startInTray)); }
             finally { GC.KeepAlive(singleInstanceMutex); }
+        }
+
+        // Posts WmShow directly to every top-level window of the already-running
+        // instance (same process name, other PID). EnumWindows, unlike
+        // HWND_BROADCAST, also lists owned windows — including the tray-hidden
+        // main form. Extra hits (a message box, the IME window) ignore the
+        // registered message, so precision beyond the PID doesn't matter.
+        static void PostShowToRunningInstance()
+        {
+            var pids = new HashSet<uint>();
+            try
+            {
+                using (var self = Process.GetCurrentProcess())
+                    foreach (Process p in Process.GetProcessesByName(self.ProcessName))
+                    {
+                        try { if (p.Id != self.Id) pids.Add((uint)p.Id); }
+                        catch { }
+                        finally { try { p.Dispose(); } catch { } }
+                    }
+            }
+            catch { }
+            if (pids.Count == 0) return;
+            try
+            {
+                NativeMethods.EnumWindows(delegate(IntPtr h, IntPtr lp)
+                {
+                    uint pid;
+                    NativeMethods.GetWindowThreadProcessId(h, out pid);
+                    if (pids.Contains(pid))
+                        NativeMethods.PostMessage(h, WmShow, IntPtr.Zero, IntPtr.Zero);
+                    return true;
+                }, IntPtr.Zero);
+            }
+            catch { }
         }
 
         // ---------- Process launching ----------
@@ -242,7 +277,7 @@ namespace ClamAVUI
             catch (Exception ex)
             {
                 AppendLog(string.Format(Lang.T("log.processStartFailed"), Path.GetFileName(exe), ex.Message), Theme.Danger);
-                scanRunning = updateRunning = monitorScan = false;
+                scan.Running = updateRunning = scan.Monitor = false;
                 SetBusy(false, Lang.T("status.startError"));
             }
         }
@@ -250,7 +285,7 @@ namespace ClamAVUI
         void StopCurrent()
         {
             cancelUpdate = true;      // interrupts a database download in progress, if any
-            cancelScanListing = true; // interrupts building the file list for a scan
+            scan.Cancel = true; // interrupts building the file list for a scan
             var wc = clamZipClient;
             if (wc != null) { try { wc.CancelAsync(); } catch { } }
             foreach (var sp in scanProcs.ToArray()) { try { sp.Kill(); } catch { } }
@@ -275,12 +310,12 @@ namespace ClamAVUI
             if (busy)
             {
                 progress.Start();
-                if (scanRunning) SetHero(ShieldState.Busy, Lang.T("hero.scanningTitle"), Lang.T("hero.scanningSub"));
-                if (scanRunning && !monitorScan)
+                if (scan.Running) SetHero(ShieldState.Busy, Lang.T("hero.scanningTitle"), Lang.T("hero.scanningSub"));
+                if (scan.Running && !scan.Monitor)
                 {
                     // stay on the dashboard: the hero shows the busy state and STOP,
                     // the detailed output is one click away on the Logs tab
-                    lastScanOutput = DateTime.Now;
+                    scan.LastOutput = DateTime.Now;
                     scanHeartbeat.Start();
                 }
             }

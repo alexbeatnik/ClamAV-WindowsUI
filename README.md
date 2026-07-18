@@ -1,251 +1,122 @@
 # ClamAV Windows UI
 
-A lightweight graphical interface for [ClamAV](https://www.clamav.net/) on Windows.
-Plain C# sources, a single ~300 KB portable exe, **zero dependencies and zero
-toolchains** — builds with the `csc.exe` compiler already built into Windows
-(.NET Framework 4.8, present on Win10/11).
+<p align="center">
+  <img src="logo.png" width="128" alt="ClamAV UI Logo" />
+</p>
 
-The interface is available in **English** (default) and **Ukrainian**, switchable
-anytime from Settings — no restart required.
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows_10_/_11-0078d7.svg)](https://www.microsoft.com/windows)
+[![Framework](https://img.shields.io/badge/.NET_Framework-4.8-purple.svg)](https://dotnet.microsoft.com/download/dotnet-framework/net48)
+[![Latest release](https://img.shields.io/github/v/release/alexbeatnik/ClamAV-WindowsUI?label=release)](../../releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/alexbeatnik/ClamAV-WindowsUI/total?color=success)](../../releases)
+[![Tests](https://img.shields.io/github/actions/workflow/status/alexbeatnik/ClamAV-WindowsUI/tests.yml?label=tests)](../../actions/workflows/tests.yml)
+![UI languages](https://img.shields.io/badge/UI-English%20%7C%20%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%81%D1%8C%D0%BA%D0%B0-green)
 
-### Dashboard
+A lightweight **graphical interface for [ClamAV](https://www.clamav.net/) on
+Windows** — on-demand scans, automatic signature updates, new-file monitoring,
+USB checks and a neutralized quarantine under one portable dashboard.
 
-![Dashboard](screenshots/dashboard.png)
+The app itself is a single ~380 KB exe with **zero dependencies and zero
+toolchains**: it builds with the `csc.exe` compiler already present in Windows
+(.NET Framework 4.8). ClamAV and its signature database are downloaded
+automatically on first run (~330 MB) and kept updated. Interface in **English**
+and **Ukrainian**, switchable anytime without a restart. It lives in the tray
+with no background services registered, nothing is installed system-wide, and
+admin rights are never required — delete the folder and it's gone.
 
-### Logs
+<p align="center">
+  <img src="screenshots/dashboard.png" width="400" alt="Dashboard" />
+  <img src="screenshots/logs.png" width="400" alt="Logs" />
+</p>
+<p align="center">
+  <img src="screenshots/quarantine.png" width="400" alt="Quarantine" />
+  <img src="screenshots/settings.png" width="400" alt="Settings" />
+</p>
 
-![Logs](screenshots/logs.png)
+## Quick start
 
-### Quarantine
+1. Download `ClamAVUI.exe` from the [latest release](../../releases/latest).
+2. Run it. The first start asks once: install per-user (shortcuts, an "Apps"
+   entry, no admin rights) or stay portable — a single folder you can carry
+   around on a stick.
+3. That's it. ClamAV with its signature database (~330 MB) is downloaded
+   automatically; the app keeps it updated and updates itself from GitHub
+   Releases.
 
-![Quarantine](screenshots/quarantine.png)
+If a `clamav` folder is already sitting next to the exe, it is used as-is and
+carried along if you install later.
 
-### Settings
+### "Windows protected your PC" warning
 
-![Settings](screenshots/settings.png)
+Downloading a release may trigger a SmartScreen / browser warning: the
+executable is not code-signed, so every new release is an unknown file with
+zero reputation for Windows. This is a reputation notice, not a detection —
+each release is built from this repository by the public
+[Release workflow](.github/workflows/release.yml). To run it anyway:
+**More info → Run anyway**.
 
-## Features
+On Windows 11 with **Smart App Control** enabled the app is blocked outright —
+Smart App Control allows only signed or well-known binaries and has no per-app
+exceptions. It can only be switched off entirely (Windows Security → App &
+browser control → Smart App Control; one-way — a Windows reset is needed to
+re-enable it).
 
-- Scan a file, a folder, or the **whole PC** (all local drives) via `clamscan`
-- **Scan RAM**: a dashboard button that scans **only** the live memory of every
-  running process — the executable, non-image regions are dumped and scanned,
-  catching injected or unpacked code that is masked or absent on disk. In seconds,
-  no file walk. The same memory scan also runs as part of the quick and full scans
-- **Quick scan** (minutes, not hours): risky file types in common infection
-  points — Downloads, Desktop, Documents, Temp, AppData, ProgramData, startup
-  folders — plus the executables of every running process **and their live
-  memory (RAM)**
-- **Scheduled quick scan**: the quick scan also runs by itself — weekly by
-  default, switchable to daily or off in Settings. If the PC was off past the
-  due time, the missed scan catches up a few minutes after the next start;
-  nothing runs while another scan, an update, or an open dialog is in the way
-- **Fast full scan**: by default a full scan checks only risky file types
-  (exe, scripts, archives, documents) — the app builds the file list itself,
-  so the scanner doesn't waste time on gigabyte-sized videos and images;
-  scanning **all** files can be enabled in Settings
-- **Skip large files**: a Settings toggle (on by default) caps the per-file
-  scan size at 200 MB so scans don't crawl through big installers, VM images
-  and media (malware ClamAV catches is almost always small); turn it off to
-  scan files of any size (a 10 s-per-object time limit keeps even those from
-  hanging the scan)
-- **clamd engine while scanning**: before a manual scan the app starts the
-  `clamd` daemon (the database loads into memory once, ~20-30s), scans with
-  several parallel `clamdscan` processes, and stops the daemon immediately
-  afterwards — it stays resident in memory only while scanning. Falls back
-  to plain `clamscan` automatically if clamd fails to start
-- **Exclusions**: a list of paths that are never scanned (the "Exclusions…"
-  button; passed as `--exclude`/`--exclude-dir`, the monitor ignores them too)
-- Live log: infected files are highlighted in red, with a scan summary
-- Signature database updates with one click (via `freshclam`)
-- **Auto-check for new files**: monitors folders — a new file appears →
-  it's scanned automatically, with the result shown as a tray notification.
-  Default folders: Downloads, Desktop, `Program Files` and
-  `Program Files (x86)`, `%TEMP%`, `AppData\Roaming`, and `C:\Windows\Temp`
-  (common places droppers get extracted to and where malware persists).
-  `C:\Windows\Temp` is only added if it's actually readable: on hardened
-  systems a non-elevated process can be denied even read access to it, so
-  the app checks first and skips it there instead of letting the
-  `FileSystemWatcher` fail. Settings offers a one-click fix to restore
-  access on such machines, after which it's watched automatically.
-  By default only **potentially dangerous file types** are scanned (exe,
-  dll, scripts, installers, archives, documents with macros) — the filter
-  can be turned off in Settings
-- **Threat handling**: when something is found, a dialog lets you choose an
-  action per file: **quarantine / delete / exclude**. The "Auto-quarantine"
-  checkbox moves files without asking (`clamscan --move`)
-- **Quarantine**: view, restore, permanently delete, or restore straight
-  **to exclusions** (so it's never flagged again). Quarantined files are
-  stored **neutralized** (every byte XOR 0xFF, `.quar` extension), so they
-  can't be launched accidentally and a resident AV (Windows Defender) won't
-  detect and rip files out of the quarantine folder; restoring reverses the
-  transform. The dashboard quarantine card shows a live counter of files
-  currently in quarantine. The quarantine page shows the **threat name**,
-  **size**, origin path, and detection date per file, with **search**
-  (by name, path, or threat), **sortable columns**, an info strip (count /
-  total size / last detection), a right-click **context menu**, and a
-  **Properties** dialog (double-click) with the **SHA256 of the original
-  content** — ready to paste into VirusTotal
-- **Exclusions**: a file can be removed from the exclusion list, deleted
-  from disk, or sent **to quarantine**
-- **USB scan offer**: when a removable drive (flash stick, card reader) is
-  plugged in, the app asks "New drive detected — scan now?" — one click
-  starts a scan of the whole drive. Can be turned off in Settings
-- **Scan performance modes** (Settings → Low / Normal / High): Low runs a
-  single scanner process at reduced OS priority so the PC stays fully
-  responsive; High uses more clamd threads and parallel scan processes at
-  elevated priority for the fastest scan
-- **Readable log**: every line carries a timestamp and a colored severity tag
-  (`[INFO]`/`[SCAN]`/`[OK]`/`[WARN]`/`[INFECTED]`), scan phases are separated
-  by stage banners, a live text progress bar shows `scanned / total (%)`,
-  and a **Details** toggle hides path lists and raw scanner chatter for a
-  compact view. Auto-scroll follows the tail but stops yanking the view
-  when you scroll up to read
-- **Statistics**: number of scans, threats found, and files in quarantine
-- Autostart with Windows — **enabled automatically on first run**
-  (`HKCU\...\Run` registry key, starts in the tray); the checkbox can be
-  cleared, and the app won't turn it back on
-- **Single instance**: launching it again doesn't open a second window, it
-  brings the running instance forward instead (mutex + broadcast message)
-- Tray icon: the close button minimizes to tray, with notifications for
-  scan results
-- **Notifications toggle** (Settings): informational tray balloons (scan
-  finished clean, database update available, USB drive busy, self-update…)
-  can be switched off — **threat alerts are always shown** regardless
-- Modern dark theme with icon buttons (custom-drawn vector glyphs, no image
-  assets or third-party UI libraries)
-- **Daily database version checks** instead of hammering the server every
-  30 minutes: a lightweight check runs once a day, and if a newer database
-  is available, the app notifies via the tray and downloads it automatically
-  (or shows an "Update Database" button if auto-update is off). If the
-  update server responds with HTTP 429 (rate limited), the app backs off
-  for a while instead of retrying immediately
-- **Self-updating**: every 4 hours the app also checks this repo's latest
-  GitHub Release; if it's newer, it downloads the new `ClamAVUI.exe`,
-  shows a tray notification, and swaps itself in on restart — no manual
-  download needed. Works in both portable and installed mode (no admin
-  prompt)
-- **Portable or installed — the first run asks**: the app offers a one-time
-  choice — install per-user to `%LocalAppData%\Programs\ClamAV UI` (no
-  admin rights or UAC; shortcuts and an "Apps" entry; the folder belongs to
-  the current user, so other local users can't tamper with the binaries) or
-  stay portable with the current folder as the root for ClamAV, the
-  database, quarantine and settings. Installing later is one button in
-  Settings
-- **About dialog** (Settings → About): version, a short description, a
-  quick-start guide for first-time users, the Apache 2.0 license, and
-  project links — star the repo, browse all releases, follow the author
+## What it can do
 
-## Building
+- Scan a file, a folder, or the **whole PC**; **Scan RAM** (live process
+  memory — catches injected or unpacked code masked on disk); a **quick scan**
+  of common infection points; and scheduled quick scans (daily / weekly, with
+  catch-up if the PC was off)
+- **Auto-check of new files**: Downloads, Desktop, Program Files, `%TEMP%`,
+  AppData and more are monitored — a new file appears, it is scanned
+  automatically and the result lands in a tray notification
+- **Threat handling your way**: a per-file choice of quarantine / delete /
+  exclude — or silent auto-quarantine
+- **Neutralized quarantine**: captured files are XOR-transformed `.quar` blobs
+  that can't run and don't trip other antiviruses; the page offers search,
+  sortable columns, threat name, origin path, and the original content's
+  SHA256 — restore, delete, or restore straight to exclusions, all reversible
+- **clamd engine while scanning**: the daemon loads the database into memory
+  once and several `clamdscan` workers scan in parallel, then it shuts down —
+  resident only for the duration of the scan (falls back to `clamscan`
+  automatically)
+- **Fast by default**: risky file types only, a 200 MB per-file cap, and scan
+  performance modes (Low / Normal / High) — all switchable in Settings
+- **Pause protection** from the tray (1 / 2 / 5 hours or until restart):
+  monitoring, scheduled and USB checks stop; any restart restores protection
+- One-click database updates with a **stale-database warning**, app
+  self-update from GitHub Releases, USB scan offer, exclusions, and a
+  color-coded log with live progress — plus a **recent activity** list on the
+  dashboard with the full log one click away
+
+## Why this project?
+
+Windows Defender is excellent, and this project is not intended to replace it.
+It is a lightweight power-tool for people who want a second, fully
+open-source scanner they control end to end: the official, unmodified ClamAV
+binaries driven by a portable dashboard written entirely in C# — no services,
+no telemetry, no admin rights, and nothing left on the system when you delete
+the folder.
+
+## For developers
+
+The whole app builds with the `csc.exe` compiler already present in Windows —
+no toolchain, no NuGet, one command:
 
 ```powershell
 .\build.ps1
 ```
 
-The script calls `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe` —
-nothing needs to be installed. Output: `ClamAVUI.exe`.
-
-## Tests
-
-```powershell
-.\test.ps1
-```
-
-Unit tests use the same zero-toolchain approach: `tests\*.cs` contains a tiny
-test runner (no NuGet, no xUnit) that is compiled together with `src\*.cs`
-into a console `ClamAVUI.Tests.exe` and executed. Covered: the quarantine
-XOR transform and index, `.cvd` header parsing, path/quoting helpers, the
-risky-extension filter, and the language table. CI runs them on every pull
-request (`.github/workflows/tests.yml`).
-
-## Installing on a new PC
-
-Just **copy the single `ClamAVUI.exe`** into any folder and run it.
-On the first start (when not already installed) the app asks how you want
-to use it — the choice is remembered and asked only once:
-
-- **Install for this user** (no admin rights, no UAC): the exe is copied to
-  `%LocalAppData%\Programs\ClamAV UI` together with anything already
-  sitting next to it (ClamAV, database, quarantine, settings), ClamAV is
-  downloaded from GitHub there (~220 MB) along with the signature database
-  if missing; Start Menu and Desktop shortcuts are created, and the app
-  appears in "Apps" with an uninstall option. The folder is private to the
-  current user, so the binaries can't be replaced by other non-admin users
-  of the PC.
-- **Portable mode**: the current folder becomes the root — ClamAV, the
-  signature database, quarantine and `settings.ini` all live next to the
-  exe, no traces left on the system.
-
-Installing can also be done later — there's a button in Settings. If ClamAV
-is already sitting next to the exe in a `clamav` folder, the app will use
-it as-is, and will carry it along with the database and quarantine during
-installation (nothing is downloaded again).
-
-> Versions before 0.0.8 installed to `C:\Program Files\ClamAV UI`. Such
-> installs keep working and self-updating as before; to migrate one, run
-> `ClamAVUI.exe --install` from the old folder (the database and quarantine
-> are carried over to the per-user location). Uninstalling removes every
-> trace — the per-user install **and** any leftover Program Files copy
-> (that part asks for admin rights once).
-
-## Releases
-
-`.github/workflows/release.yml` builds `ClamAVUI.exe` and publishes it as a
-GitHub Release whenever `AssemblyVersion` in `src/AssemblyInfo.cs` changes on `main`
-(bump the version, push, and a `vX.Y.Z` tag + release with the exe attached
-appear automatically). It no-ops if that version was already released, and
-can also be triggered manually from the Actions tab.
-
-## Structure
-
-```
-src/                       — the application (WinForms, C# 5), compiled into one exe
-  AssemblyInfo.cs          — assembly metadata (the version lives here)
-  Theme.cs                 — dark palette, rounded corners, dark title bar interop
-  Lang.cs                  — English/Ukrainian string table
-  Icons.cs                 — vector glyphs drawn with GDI+ (no image assets)
-  Controls.cs              — custom-drawn buttons, toggles, cards, nav tabs
-  MainForm.cs              — state fields, entry point, process plumbing, autostart
-  MainForm.Ui.cs           — pages and UI construction, language switching
-  MainForm.Install.cs      — per-user install/uninstall (+ legacy Program Files), ACL fixes
-  MainForm.Settings.cs     — locating ClamAV, settings load/save
-  MainForm.Quarantine.cs   — quarantine storage, index, threat dialog
-  MainForm.Monitor.cs      — folder monitoring, exclusions
-  MainForm.Scan.cs         — scans, progress/ETA, clamd engine
-  MainForm.Usb.cs          — USB drive detection, scan-on-connect prompt
-  MainForm.Updates.cs      — DB updates, ClamAV download, app self-update
-tests/                     — unit tests + the zero-dependency test runner
-.claude/skills/            — step-by-step playbooks for AI coding agents (localization, settings, testing, releases, verification)
-AGENTS.md      — build/test/style guide for AI coding agents and contributors
-LICENSE        — Apache License 2.0
-clamav.ico     — app icon (exe + window + tray), ClamAV logo
-logo.png       — header logo (embedded in the exe as a resource)
-build.ps1      — builds the app with the built-in csc.exe
-test.ps1       — builds and runs the unit tests (ClamAVUI.Tests.exe)
-settings.ini   — settings and statistics (created automatically)
-quarantine/    — quarantine: neutralized (.quar) files + index.txt with origin paths
-clamav/        — portable ClamAV (not in git, downloaded separately)
-ClamAVUI.exe   — build output (not in git)
-```
-
-> **Note:** files under `quarantine/` are stored neutralized — every byte is
-> XOR-ed with 0xFF and the file gets a `.quar` extension, so nothing there can
-> run and other antiviruses won't react to the folder. Still, don't copy files
-> out of it by hand; restore or delete them via the UI.
-
-## How monitoring works
-
-A `FileSystemWatcher` watches the configured folders (the **"Folders…"**
-button). New files are queued with a 3s debounce (so a file has time to
-finish being written; temporary extensions like `.crdownload`/`.part` are
-ignored until they're renamed), then scanned together in one `clamscan`
-batch. If a threat is found, the window is restored and a warning is shown.
+Architecture, the scan pipeline, install layout, project structure, and
+contributor constraints live in **[README.DEV.md](README.DEV.md)** (and
+`AGENTS.md` for AI-agent specifics).
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE) — free to
-use, modify, and distribute, including commercially.
+[Apache License 2.0](LICENSE) — free to use, modify, and distribute,
+including commercially.
 
-ClamAV® itself is a registered trademark of Cisco Systems, Inc. and is
-licensed separately under GPLv2. This project is an independent open-source
-interface that runs the official, unmodified ClamAV binaries as separate
-processes; it does not bundle or link against ClamAV code.
+ClamAV® is a registered trademark of Cisco Systems, Inc. and is licensed
+separately under GPLv2. This project is an independent open-source interface
+that runs the official, unmodified ClamAV binaries as separate processes; it
+does not bundle or link against ClamAV code.
