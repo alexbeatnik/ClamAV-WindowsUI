@@ -26,8 +26,13 @@ namespace ClamAVUI
             // (the settings card is absolute-positioned), so resizing/maximizing
             // only misaligns them — and a resizable frame's borders shrank the
             // client height enough to squeeze the recent-activity card to one line.
+            // Both caption boxes are dropped so only ✕ remains — Windows can't show
+            // minimize+close without a grayed maximize placeholder between them, and
+            // ✕ already minimizes to the tray instead of exiting (see OnFormClosing),
+            // so a separate minimize button adds nothing.
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
+            MinimizeBox = false;
             Size = new Size(940, 720);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Theme.Bg;
